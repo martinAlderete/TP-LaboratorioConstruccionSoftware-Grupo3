@@ -1,0 +1,33 @@
+{
+  "name": "logitrack",
+  "version": "1.0.0",
+  "description": "Sistema Federal de Gestión de Logística y Distribución - MVP TP Inicial UNGS 1C2026",
+  "main": "src/index.html",
+  "scripts": {
+    "test": "node tests/test_basic.js",
+    "lint": "eslint src/**/*.js tests/**/*.js --ignore-pattern src/index.html || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TU_USUARIO/logitrack.git"
+  },
+  "keywords": [
+    "logistica",
+    "envios",
+    "tracking",
+    "ungs",
+    "laboratorio-software"
+  ],
+  "authors": [
+    "Martin Alderete",
+    "Juan Francisco Gottig",
+    "Juan Cruz Segovia"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

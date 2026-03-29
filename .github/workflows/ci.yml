@@ -1,0 +1,50 @@
+name: LogiTrack CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificación sintáctica (Lint)
+        run: npm run lint
+
+      - name: Ejecutar tests
+        run: npm test
+
+  verificar-estructura:
+    name: Verificar estructura del repositorio
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar carpetas y archivos requeridos
+        run: |
+          echo "Verificando estructura del repositorio..."
+          test -d docs       && echo "✅ /docs existe"        || (echo "❌ /docs no encontrado" && exit 1)
+          test -d src        && echo "✅ /src existe"         || (echo "❌ /src no encontrado" && exit 1)
+          test -d tests      && echo "✅ /tests existe"       || (echo "❌ /tests no encontrado" && exit 1)
+          test -f README.md  && echo "✅ README.md existe"    || (echo "❌ README.md no encontrado" && exit 1)
+          test -f CONTRIBUTING.md && echo "✅ CONTRIBUTING.md existe" || (echo "❌ CONTRIBUTING.md no encontrado" && exit 1)
+          test -f src/index.html  && echo "✅ src/index.html existe"  || (echo "❌ src/index.html no encontrado" && exit 1)
+          echo "✅ Estructura verificada correctamente."

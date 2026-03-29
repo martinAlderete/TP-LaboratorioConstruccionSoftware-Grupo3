@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogiTrack — Sistema de Gestión de Envíos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a33;
+    --accent: #f0e040;
+    --accent2: #40c8f0;
+    --danger: #f05040;
+    --success: #40f0a0;
+    --warning: #f0a040;
+    --text: #e8e8ec;
+    --text-muted: #7a7a8c;
+    --text-dim: #4a4a5a;
+    --radius: 8px;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  nav {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 32px; display: flex; align-items: center; height: 60px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--accent); letter-spacing: -0.5px; margin-right: 40px; display: flex; align-items: center; gap: 8px; }
+  .nav-logo span { color: var(--text-muted); font-weight: 400; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
+  .nav-links { display: flex; gap: 4px; flex: 1; }
+  .nav-link { padding: 6px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; border: none; background: none; font-family: var(--sans); }
+  .nav-link:hover { color: var(--text); background: var(--surface2); }
+  .nav-link.active { color: var(--accent); background: rgba(240,224,64,0.08); }
+  .nav-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
+  .role-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: var(--mono); font-weight: 500; background: rgba(64,200,240,0.12); color: var(--accent2); border: 1px solid rgba(64,200,240,0.25); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text); }
+  .role-switcher { display: flex; gap: 8px; align-items: center; padding: 6px 12px; background: var(--surface2); border-radius: 20px; font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; }
+  .role-switcher:hover { border-color: var(--accent2); }
+
+  .screen { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; animation: fadeIn 0.2s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .page-header { margin-bottom: 28px; }
+  .page-header h1 { font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-header p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .card-title { font-family: var(--display); font-size: 15px; font-weight: 700; margin-bottom: 20px; color: var(--text); letter-spacing: -0.3px; }
+
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+  .metric::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .metric.yellow::before { background: var(--accent); }
+  .metric.blue::before { background: var(--accent2); }
+  .metric.green::before { background: var(--success); }
+  .metric.orange::before { background: var(--warning); }
+  .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); font-family: var(--mono); }
+  .metric-value { font-family: var(--display); font-size: 32px; font-weight: 800; margin-top: 8px; letter-spacing: -1px; }
+  .metric.yellow .metric-value { color: var(--accent); }
+  .metric.blue .metric-value { color: var(--accent2); }
+  .metric.green .metric-value { color: var(--success); }
+  .metric.orange .metric-value { color: var(--warning); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-family: var(--mono); }
+  input, select, textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-family: var(--sans); font-size: 14px; outline: none; transition: border-color 0.15s; width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text-dim); }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .tracking-preview { background: var(--surface2); border: 1px dashed var(--border); border-radius: 6px; padding: 12px 16px; font-family: var(--mono); font-size: 18px; color: var(--accent); letter-spacing: 2px; text-align: center; margin-bottom: 4px; }
+  .tracking-hint { font-size: 11px; color: var(--text-dim); text-align: center; }
+
+  .btn { padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: var(--sans); transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #0f0f11; }
+  .btn-primary:hover { background: #ffe800; transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+  .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: var(--mono); font-weight: 500; white-space: nowrap; }
+  .badge-creado { background: rgba(122,122,140,0.15); color: var(--text-muted); border: 1px solid rgba(122,122,140,0.3); }
+  .badge-preparacion { background: rgba(240,224,64,0.12); color: var(--accent); border: 1px solid rgba(240,224,64,0.3); }
+  .badge-transito { background: rgba(64,200,240,0.12); color: var(--accent2); border: 1px solid rgba(64,200,240,0.3); }
+  .badge-entregado { background: rgba(64,240,160,0.12); color: var(--success); border: 1px solid rgba(64,240,160,0.3); }
+
+  .search-bar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; }
+  .search-input-wrap { position: relative; flex: 1; }
+  .search-input-wrap input { padding-left: 40px; }
+  .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 16px; pointer-events: none; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-dim); font-family: var(--mono); border-bottom: 1px solid var(--border); font-weight: 500; }
+  tbody tr { border-bottom: 1px solid rgba(42,42,51,0.6); cursor: pointer; transition: background 0.1s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 14px 16px; font-size: 14px; vertical-align: middle; }
+  .tracking-id { font-family: var(--mono); font-size: 13px; color: var(--accent2); font-weight: 500; }
+  .td-muted { color: var(--text-muted); font-size: 13px; }
+
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 20px; }
+  .detail-tracking { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--accent2); letter-spacing: 2px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .detail-field { display: flex; flex-direction: column; gap: 4px; }
+  .detail-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); font-family: var(--mono); }
+  .detail-value { font-size: 15px; color: var(--text); }
+
+  .timeline { display: flex; flex-direction: column; }
+  .timeline-item { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .dot-done { background: var(--success); box-shadow: 0 0 8px rgba(64,240,160,0.5); }
+  .dot-current { background: var(--accent); box-shadow: 0 0 8px rgba(240,224,64,0.5); }
+  .dot-pending { background: var(--border); }
+  .timeline-content { flex: 1; }
+  .timeline-state { font-weight: 600; font-size: 14px; }
+  .timeline-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-family: var(--mono); }
+
+  .state-flow { display: flex; align-items: center; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+  .state-node { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 2px solid; font-family: var(--mono); }
+  .state-arrow { color: var(--text-dim); font-size: 18px; }
+  .sn-creado { border-color: var(--text-dim); color: var(--text-muted); background: rgba(122,122,140,0.08); }
+  .sn-preparacion { border-color: var(--accent); color: var(--accent); background: rgba(240,224,64,0.08); }
+  .sn-transito { border-color: var(--accent2); color: var(--accent2); background: rgba(64,200,240,0.08); }
+  .sn-entregado { border-color: var(--success); color: var(--success); background: rgba(64,240,160,0.08); }
+  .sn-active { transform: scale(1.08); box-shadow: 0 0 12px rgba(255,255,255,0.1); }
+
+  .role-notice { background: rgba(64,200,240,0.06); border: 1px solid rgba(64,200,240,0.2); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--accent2); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 200; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 36px; max-width: 440px; width: 90%; text-align: center; }
+  .modal-icon { font-size: 48px; margin-bottom: 16px; }
+  .modal h2 { font-family: var(--display); font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .modal p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .modal-tracking { font-family: var(--mono); font-size: 22px; color: var(--accent); letter-spacing: 2px; margin-bottom: 24px; }
+
+  input.error, select.error { border-color: var(--danger) !important; background: rgba(240,80,64,0.05); }
+  .field-error { font-size: 11px; color: var(--danger); margin-top: 4px; display: none; }
+  .field-error.show { display: block; }
+  .obs-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 300; }
+  .obs-modal-overlay.show { display: flex; }
+  .obs-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; max-width: 460px; width: 90%; }
+  .obs-modal h3 { font-family: var(--display); font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .obs-modal .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+  .obs-modal .state-transition { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 12px 16px; background: var(--surface2); border-radius: 8px; font-family: var(--mono); font-size: 13px; }
+  .obs-modal .arrow { color: var(--accent); font-size: 18px; }
+  .nav-link.arco-link { color: var(--warning); border: 1px solid rgba(240,160,64,0.3); margin-left: 8px; }
+  .nav-link.arco-link:hover { background: rgba(240,160,64,0.08); border-color: var(--warning); }
+  .nav-link.arco-link.active { background: rgba(240,160,64,0.12); color: var(--warning); border-color: var(--warning); }
+  .arco-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(240,160,64,0.1); border: 1px solid rgba(240,160,64,0.3); border-radius: 20px; font-size: 12px; color: var(--warning); font-family: var(--mono); }
+  .user-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .user-row:hover { background: rgba(255,255,255,0.03); }
+  .user-info { display: flex; align-items: center; gap: 14px; }
+  .user-avatar-lg { width: 40px; height: 40px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--text); flex-shrink: 0; }
+  .user-name { font-size: 15px; font-weight: 500; }
+  .user-meta { font-size: 12px; color: var(--text-muted); font-family: var(--mono); margin-top: 2px; }
+  .user-actions { display: flex; gap: 8px; }
+  .toggle-switch { position: relative; width: 42px; height: 24px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 24px; transition: 0.2s; }
+  .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: var(--text-muted); border-radius: 50%; transition: 0.2s; }
+  input:checked + .toggle-slider { background: rgba(64,240,160,0.3); }
+  input:checked + .toggle-slider:before { transform: translateX(18px); background: var(--success); }
+  /* ── LOGIN ─────────────────────────────────────────────────────── */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 48px 40px; width: 100%; max-width: 420px; }
+  .login-logo { font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--accent); letter-spacing: -1px; margin-bottom: 4px; }
+  .login-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 36px; }
+  .login-card .form-group { margin-bottom: 16px; }
+  .login-error { display: none; color: var(--danger); font-size: 13px; padding: 10px 14px; background: rgba(240,80,64,0.08); border-radius: 6px; border: 1px solid rgba(240,80,64,0.25); margin-bottom: 16px; }
+  .login-error.show { display: block; }
+  .login-btn { width: 100%; padding: 12px; font-size: 15px; font-weight: 700; margin-top: 8px; }
+  .login-demo-users { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .login-demo-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-dim); font-family: var(--mono); margin-bottom: 12px; }
+  .demo-user-chip { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+  .demo-user-chip:hover { border-color: var(--accent2); }
+  .demo-user-info { display: flex; flex-direction: column; gap: 2px; }
+  .demo-user-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .demo-user-creds { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+  .demo-user-role { font-size: 11px; font-family: var(--mono); padding: 2px 8px; border-radius: 10px; }
+  .role-op { background: rgba(122,122,140,0.15); color: var(--text-muted); border: 1px solid rgba(122,122,140,0.3); }
+  .role-sup { background: rgba(64,200,240,0.12); color: var(--accent2); border: 1px solid rgba(64,200,240,0.25); }
+  .role-adm { background: rgba(240,224,64,0.12); color: var(--accent); border: 1px solid rgba(240,224,64,0.25); }
+  /* ── END LOGIN ──────────────────────────────────────────────────── */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .back-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); cursor: pointer; border: none; background: none; font-family: var(--sans); padding: 0; margin-bottom: 20px; transition: color 0.15s; }
+  .back-btn:hover { color: var(--text); }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .mt-16 { margin-top: 16px; }
+  .separator { height: 1px; background: var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">⬡ LogiTrack</div>
+    <div class="login-subtitle">Sistema Federal de Gestión de Logística y Distribución</div>
+
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="login-username" placeholder="Ej: op.gonzalez" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-error" id="login-error">⚠ Usuario o contraseña incorrectos.</div>
+    <button class="btn btn-primary login-btn" onclick="doLogin()">Ingresar →</button>
+
+    <div class="login-demo-users">
+      <div class="login-demo-title">Usuarios de demostración</div>
+      <div class="demo-user-chip" onclick="fillLogin('op.gonzalez','op1234')">
+        <div class="demo-user-info">
+          <div class="demo-user-name">María González</div>
+          <div class="demo-user-creds">op.gonzalez / op1234</div>
+        </div>
+        <span class="demo-user-role role-op">OPERADOR</span>
+      </div>
+      <div class="demo-user-chip" onclick="fillLogin('op.ramirez','op1234')">
+        <div class="demo-user-info">
+          <div class="demo-user-name">Carlos Ramírez</div>
+          <div class="demo-user-creds">op.ramirez / op1234</div>
+        </div>
+        <span class="demo-user-role role-op">OPERADOR</span>
+      </div>
+      <div class="demo-user-chip" onclick="fillLogin('sup.montero','sup1234')">
+        <div class="demo-user-info">
+          <div class="demo-user-name">Juan Sup. Montero</div>
+          <div class="demo-user-creds">sup.montero / sup1234</div>
+        </div>
+        <span class="demo-user-role role-sup">SUPERVISOR</span>
+      </div>
+      <div class="demo-user-chip" onclick="fillLogin('adm.sistema','adm1234')">
+        <div class="demo-user-info">
+          <div class="demo-user-name">Admin Sistema</div>
+          <div class="demo-user-creds">adm.sistema / adm1234</div>
+        </div>
+        <span class="demo-user-role role-adm">ADMINISTRADOR</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav id="main-nav" style="display:none">
+  <div class="nav-logo">⬡ LogiTrack <span>MVP</span></div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showScreen('listado')">Dashboard</button>
+    <button class="nav-link" onclick="showScreen('alta')">Nuevo Envío</button>
+    <button class="nav-link" onclick="showScreen('busqueda')">Buscar</button>
+    <button class="nav-link" onclick="showScreen('usuarios')">Usuarios</button>
+    <button class="nav-link arco-link" onclick="showScreen('arco')">🔒 Mis Datos</button>
+    <button class="nav-link" onclick="showScreen('ia')" style="margin-left:8px;border:1px solid rgba(100,200,150,0.3);color:#4ade80">🧠 IA Demoras</button>
+    <button class="nav-link" onclick="showScreen('bulk')" style="margin-left:4px;border:1px solid rgba(160,120,240,0.3);color:#a78bfa">📦 Carga Lote</button>
+  </div>
+  <div class="nav-user">
+    <div class="role-switcher" onclick="doLogout()" title="Cerrar sesión" style="color:var(--danger);border-color:rgba(240,80,64,0.3)">⎋ Cerrar sesión</div>
+    <div class="role-badge" id="role-badge">SUPERVISOR</div>
+    <div class="avatar" id="user-avatar">JS</div>
+  </div>
+</nav>
+
+<!-- LISTADO -->
+<div id="app-content" style="display:none"><div class="screen active" id="screen-listado">
+  <div class="page-header">
+    <div class="flex-between">
+      <div>
+        <h1>Dashboard de Envíos</h1>
+        <p>Sistema Federal de Gestión de Logística y Distribución — LogiTrack 2026</p>
+      </div>
+      <button class="btn btn-primary" onclick="showScreen('alta')">+ Nuevo envío</button>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric yellow"><div class="metric-label">Total Envíos</div><div class="metric-value" id="total-count">0</div></div>
+    <div class="metric blue"><div class="metric-label">En Tránsito</div><div class="metric-value" id="transito-count">0</div></div>
+    <div class="metric green"><div class="metric-label">Entregados</div><div class="metric-value" id="entregado-count">0</div></div>
+    <div class="metric orange"><div class="metric-label">En Preparación</div><div class="metric-value" id="preparacion-count">0</div></div>
+  </div>
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0">Envíos Recientes</div>
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('busqueda')">🔍 Buscar</button>
+    </div>
+    <table>
+      <thead><tr><th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Destino</th><th>Estado</th><th>Fecha</th></tr></thead>
+      <tbody id="envios-tbody"></tbody>
+    </table>
+    <div id="empty-listado" class="empty-state" style="display:none">
+      <div class="empty-icon">📦</div>
+      <div>No hay envíos registrados</div>
+      <div style="margin-top:12px"><button class="btn btn-primary" onclick="showScreen('alta')">Crear primer envío</button></div>
+    </div>
+    <div id="pagination-controls"></div>
+  </div>
+</div>
+
+<!-- ALTA -->
+<div class="screen" id="screen-alta">
+  <button class="back-btn" onclick="showScreen('listado')">← Volver al Dashboard</button>
+  <div class="page-header">
+    <h1>Nuevo Envío</h1>
+    <p>Completá los datos del envío. El tracking ID se asignará automáticamente.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
+    <div class="card">
+      <div class="card-title">Datos del Envío</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre Remitente *</label><input type="text" id="f-remitente" placeholder="Ej: Distribuidora Palermo S.A." oninput="this.classList.remove('error');if(!document.querySelector('.error'))document.getElementById('form-error').style.display='none'"></div>
+        <div class="form-group"><label>Nombre Destinatario *</label><input type="text" id="f-destinatario" placeholder="Ej: Juan García" oninput="this.classList.remove('error');if(!document.querySelector('.error'))document.getElementById('form-error').style.display='none'"></div>
+        <div class="form-group"><label>Provincia de Origen *</label>
+          <select id="f-origen"><option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Neuquén</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option></select>
+        </div>
+        <div class="form-group"><label>Ciudad de Origen *</label><input type="text" id="f-origen-ciudad" placeholder="Ej: Rosario"></div>
+        <div class="form-group"><label>Calle y número de Origen *</label><input type="text" id="f-origen-calle" placeholder="Ej: Av. Pellegrini 1234"></div>
+        <div class="form-group"><label>Provincia de Destino *</label>
+          <select id="f-destino"><option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Neuquén</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option></select>
+        </div>
+        <div class="form-group"><label>Ciudad de Destino *</label><input type="text" id="f-destino-ciudad" placeholder="Ej: Mendoza"></div>
+        <div class="form-group"><label>Calle y número de Destino *</label><input type="text" id="f-destino-calle" placeholder="Ej: San Martín 456, Piso 2"></div>
+        <div class="form-group"><label>Teléfono del Destinatario <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(opcional)</span></label><input type="text" id="f-tel-destinatario" placeholder="Ej: +54 9 261 555-1234"></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="f-peso" placeholder="0.0" min="0" step="0.1"></div>
+        <div class="form-group"><label>Tipo de Paquete</label>
+          <select id="f-tipo"><option>Caja estándar</option><option>Sobre</option><option>Pallet</option><option>Frágil</option><option>Refrigerado</option></select>
+        </div>
+        <div class="form-group full"><label>Observaciones</label><textarea id="f-obs" placeholder="Instrucciones especiales, referencias de entrega, etc."></textarea></div>
+      </div>
+      <div id="form-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px;padding:10px 14px;background:rgba(240,80,64,0.08);border-radius:6px;border:1px solid rgba(240,80,64,0.25);">⚠ Completá todos los campos marcados en rojo.</div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="showScreen('listado')">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearEnvio()">Registrar Envío →</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-title">Tracking ID</div>
+        <div class="tracking-preview" id="tracking-preview">LT-????-????</div>
+        <div class="tracking-hint">Se generará al confirmar</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Estado inicial</div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="badge badge-creado">CREADO</span><span style="font-size:13px;color:var(--text-muted)">Estado por defecto</span></div>
+        <div class="separator"></div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.7">Flujo: Creado → En Preparación → En Tránsito → Entregado</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ley 25.326</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.7">Los datos personales serán tratados únicamente para la gestión del envío, en cumplimiento de la Ley de Protección de Datos Personales.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BUSQUEDA -->
+<div class="screen" id="screen-busqueda">
+  <div class="page-header">
+    <h1>Buscar Envíos</h1>
+    <p>Buscá por tracking ID, nombre del destinatario o remitente</p>
+  </div>
+  <div class="card">
+    <div class="search-bar">
+      <div class="search-input-wrap" style="flex:2">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Tracking ID (ej: LT-2026-0001) o nombre..." oninput="buscar()">
+      </div>
+      <select id="filter-estado" onchange="buscar()" style="width:180px">
+        <option value="">Todos los estados</option>
+        <option value="Creado">Creado</option>
+        <option value="En Preparación">En Preparación</option>
+        <option value="En Tránsito">En Tránsito</option>
+        <option value="Entregado">Entregado</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="clearSearch()">Limpiar</button>
+    </div>
+    <div id="search-results-count" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
+    <table>
+      <thead><tr><th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Origen</th><th>Destino</th><th>Estado</th></tr></thead>
+      <tbody id="search-tbody"></tbody>
+    </table>
+    <div id="empty-busqueda" class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div>Ingresá un término para buscar</div>
+    </div>
+  </div>
+</div>
+
+<!-- DETALLE -->
+<div class="screen" id="screen-detalle">
+  <button class="back-btn" id="back-from-detail">← Volver</button>
+  <div id="detalle-content"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <h2>¡Envío registrado!</h2>
+    <p>El envío fue creado exitosamente con el siguiente tracking ID:</p>
+    <div class="modal-tracking" id="modal-tracking-id"></div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="btn btn-ghost" onclick="closeModal();showScreen('listado')">Ver listado</button>
+      <button class="btn btn-primary" onclick="closeModal();verDetalle(lastCreated)">Ver detalle →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCO - Derechos sobre datos personales -->
+<div class="screen" id="screen-arco">
+  <div class="page-header">
+    <div class="flex-between">
+      <div>
+        <h1>🔒 Mis Datos Personales</h1>
+        <p>Ejercé tus derechos conforme a la Ley 25.326 de Protección de Datos Personales (acceso, rectificación, supresión, confidencialidad)</p>
+      </div>
+      <div class="arco-badge">Ley 25.326 · Art. 14 y 16</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+    <div class="card" style="border-color:rgba(64,200,240,0.2)">
+      <div class="card-title" style="color:var(--accent2)">¿Qué son los derechos ARCO?</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+        <div style="margin-bottom:10px"><strong style="color:var(--text)">Acceso (Art. 14):</strong> Podés solicitar qué datos tuyos tiene registrados el sistema. El responsable debe responder dentro de los 10 días corridos.</div>
+        <div style="margin-bottom:10px"><strong style="color:var(--text)">Rectificación / Actualización (Art. 16):</strong> Podés pedir la corrección de datos inexactos o incompletos. El plazo para rectificar es de 5 días hábiles.</div>
+        <div style="margin-bottom:10px"><strong style="color:var(--text)">Supresión (Art. 16):</strong> Podés solicitar la eliminación de tus datos cuando ya no sean necesarios para los fines que fueron recolectados.</div>
+        <div><strong style="color:var(--text)">Confidencialidad (Art. 16):</strong> Podés solicitar que tus datos sean sometidos a confidencialidad cuando su tratamiento no se ajuste a la ley.</div>
+      </div>
+    </div>
+    <div class="card" style="border-color:rgba(240,160,64,0.2)">
+      <div class="card-title" style="color:var(--warning)">Base legal del tratamiento</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+        <div style="margin-bottom:8px">LogiTrack trata tus datos personales (nombre, domicilio) únicamente para la <strong style="color:var(--text)">gestión del servicio de envío</strong> contratado.</div>
+        <div style="margin-bottom:8px">Los datos <strong style="color:var(--text)">no se ceden a terceros</strong> ni se utilizan con fines comerciales o publicitarios.</div>
+        <div>Período de retención: <strong style="color:var(--text)">5 años</strong> desde la entrega, por obligaciones legales y fiscales.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Solicitar ejercicio de derechos ARCO</div>
+    <div style="background:rgba(240,160,64,0.06);border:1px solid rgba(240,160,64,0.2);border-radius:6px;padding:12px 16px;font-size:13px;color:var(--warning);margin-bottom:20px">
+      ⚠ Esta solicitud será procesada por el operador responsable dentro de los 10 días hábiles establecidos por la Ley 25.326.
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Tu nombre completo *</label><input type="text" id="arco-nombre" placeholder="Ej: Ana Martínez"></div>
+      <div class="form-group"><label>Tu email de contacto *</label><input type="text" id="arco-email" placeholder="Ej: ana@email.com"></div>
+      <div class="form-group"><label>Tipo de derecho a ejercer *</label>
+        <select id="arco-tipo">
+          <option value="">— Seleccioná el derecho —</option>
+          <option value="Acceso">Acceso — Quiero saber qué datos tiene el sistema sobre mí</option>
+          <option value="Rectificación">Rectificación — Quiero corregir datos incorrectos</option>
+          <option value="Supresión">Supresión — Quiero que se eliminen mis datos (Art. 16)</option>
+          <option value="Confidencialidad">Confidencialidad — Quiero que mis datos sean sometidos a confidencialidad</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Tracking ID relacionado <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(si aplica)</span></label>
+        <input type="text" id="arco-tracking" placeholder="Ej: LT-2026-0001">
+      </div>
+      <div class="form-group full"><label>Descripción del pedido *</label>
+        <textarea id="arco-desc" placeholder="Describí en detalle qué información querés acceder, rectificar, cancelar u oponerte..." style="min-height:100px"></textarea>
+      </div>
+    </div>
+    <div id="arco-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px;padding:10px 14px;background:rgba(240,80,64,0.08);border-radius:6px;border:1px solid rgba(240,80,64,0.25)">
+      ⚠ Completá los campos obligatorios (*).
+    </div>
+    <div id="arco-success" style="display:none;color:var(--success);font-size:13px;margin-top:12px;padding:12px 16px;background:rgba(64,240,160,0.08);border-radius:6px;border:1px solid rgba(64,240,160,0.25)">
+      ✅ Tu solicitud fue registrada correctamente. Recibirás una confirmación y el operador te contactará dentro de los 10 días hábiles.
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('arco-nombre').value='';document.getElementById('arco-email').value='';document.getElementById('arco-tipo').selectedIndex=0;document.getElementById('arco-tracking').value='';document.getElementById('arco-desc').value='';document.getElementById('arco-error').style.display='none';document.getElementById('arco-success').style.display='none'">Limpiar</button>
+      <button class="btn btn-primary" onclick="enviarARCO()" style="background:var(--warning);color:#0f0f11">Enviar solicitud →</button>
+    </div>
+  </div>
+</div>
+
+<!-- USUARIOS - Gestión de usuarios (solo Administrador) -->
+<div class="screen" id="screen-usuarios">
+  <div class="page-header">
+    <div class="flex-between">
+      <div>
+        <h1>Gestión de Usuarios</h1>
+        <p>Administrá los operadores y supervisores del sistema</p>
+      </div>
+      <button class="btn btn-primary" id="btn-nuevo-usuario" onclick="showNuevoUsuarioForm()">+ Nuevo usuario</button>
+    </div>
+  </div>
+  <div id="admin-only-notice" class="role-notice" style="display:none;background:rgba(240,224,64,0.06);border-color:rgba(240,224,64,0.2);color:var(--accent);margin-bottom:20px">
+    ⚠ Solo los usuarios con rol <strong>Administrador</strong> pueden gestionar cuentas. Tu rol actual no tiene acceso a esta sección.
+  </div>
+  <div id="nuevo-usuario-form" style="display:none;margin-bottom:20px">
+    <div class="card" style="border-color:rgba(64,240,160,0.2)">
+      <div class="card-title">Nuevo Usuario</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre completo *</label><input type="text" id="nu-nombre" placeholder="Ej: María González"></div>
+        <div class="form-group"><label>Nombre de usuario *</label><input type="text" id="nu-username" placeholder="Ej: op.gonzalez"></div>
+        <div class="form-group"><label>Rol *</label>
+          <select id="nu-rol">
+            <option value="">— Seleccioná un rol —</option>
+            <option value="Operador">Operador</option>
+            <option value="Supervisor">Supervisor</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Estado</label>
+          <select id="nu-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select>
+        </div>
+      </div>
+      <div id="nu-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px;padding:10px 14px;background:rgba(240,80,64,0.08);border-radius:6px;border:1px solid rgba(240,80,64,0.25)">⚠ Completá todos los campos obligatorios.</div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="document.getElementById('nuevo-usuario-form').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" onclick="crearUsuario()">Crear usuario →</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Usuarios del sistema</div>
+    <div id="usuarios-list"></div>
+  </div>
+</div>
+
+</div><!-- /app-content -->
+
+<!-- MODAL CARGA POR LOTE EXITOSA -->
+<div class="modal-overlay" id="bulk-success-modal">
+  <div class="modal">
+    <div class="modal-icon">📦</div>
+    <h2>¡Carga por lote exitosa!</h2>
+    <p id="bulk-success-msg">Se cargaron X envíos correctamente.</p>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="btn btn-primary" onclick="document.getElementById('bulk-success-modal').classList.remove('show');showScreen('listado')">Ver Dashboard →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CAMBIO DE ESTADO CON OBSERVACIONES -->
+<div class="obs-modal-overlay" id="obs-modal">
+  <div class="obs-modal">
+    <h3>Confirmar cambio de estado</h3>
+    <p class="subtitle">Esta acción quedará registrada con tu usuario y la fecha/hora actual.</p>
+    <div class="state-transition" id="obs-state-transition"></div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>Observaciones <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <textarea id="obs-estado-input" placeholder="Ej: Paquete entregado en portería, firmó recepcionista..." style="min-height:90px"></textarea>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeObsModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCambioEstado()">Confirmar →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentRole = 'Supervisor';
+let lastCreated = null;
+let fromSearch = false;
+let nextNum = 5;
+
+const envios = [
+  { id:'LT-2026-0001', remitente:'Distribuidora Palermo S.A.', destinatario:'Carlos Romero', origen:'CABA, Buenos Aires, Av. Corrientes 1234', destino:'Córdoba, Córdoba, Av. Colón 567', telDestinatario:'+54 9 351 555-0101', tipo:'Caja estándar', peso:'12.5', obs:'Frágil, manejar con cuidado', estado:'En Tránsito', fecha:'2026-03-15', historial:[
+    {estado:'Creado',ts:'2026-03-15 09:12',usuario:'op.gonzalez'},
+    {estado:'En Preparación',ts:'2026-03-15 10:30',usuario:'op.gonzalez'},
+    {estado:'En Tránsito',ts:'2026-03-16 08:00',usuario:'sup.montero'},
+  ]},
+  { id:'LT-2026-0002', remitente:'Logística Sur SRL', destinatario:'Ana Martínez', origen:'Buenos Aires, Mar del Plata, San Martín 890', destino:'Santa Fe, Rosario, Pellegrini 234', telDestinatario:'+54 9 341 555-0202', tipo:'Sobre', peso:'0.3', obs:'', estado:'Entregado', fecha:'2026-03-14', historial:[
+    {estado:'Creado',ts:'2026-03-14 08:00',usuario:'op.ramirez'},
+    {estado:'En Preparación',ts:'2026-03-14 09:15',usuario:'op.ramirez'},
+    {estado:'En Tránsito',ts:'2026-03-14 14:00',usuario:'sup.montero'},
+    {estado:'Entregado',ts:'2026-03-15 11:20',usuario:'op.ramirez'},
+  ]},
+  { id:'LT-2026-0003', remitente:'Grupo Norte Express', destinatario:'Municipalidad de Salta', origen:'Salta, Salta, Caseros 123', destino:'Tucumán, San Miguel de Tucumán, 24 de Septiembre 450', telDestinatario:'+54 387 421-0000', tipo:'Pallet', peso:'80.0', obs:'Requiere grúa', estado:'En Preparación', fecha:'2026-03-17', historial:[
+    {estado:'Creado',ts:'2026-03-17 07:45',usuario:'op.garcia'},
+    {estado:'En Preparación',ts:'2026-03-17 09:00',usuario:'sup.montero'},
+  ]},
+  { id:'LT-2026-0004', remitente:'TechStore Argentina', destinatario:'Pedro Vidal', origen:'CABA, Buenos Aires, Florida 560', destino:'Mendoza, Mendoza, Aristides Villanueva 789', telDestinatario:'+54 9 261 555-0303', tipo:'Frágil', peso:'3.2', obs:'Equipo electrónico', estado:'Creado', fecha:'2026-03-18', historial:[
+    {estado:'Creado',ts:'2026-03-18 14:20',usuario:'op.gonzalez'},
+  ]},
+];
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  if(name==='listado'){document.querySelector('.nav-link:nth-child(1)').classList.add('active');renderListado();}
+  if(name==='alta'){document.querySelector('.nav-link:nth-child(2)').classList.add('active');resetForm();}
+  if(name==='busqueda'){document.querySelector('.nav-link:nth-child(3)').classList.add('active');renderSearchInit();}
+  if(name==='usuarios'){document.querySelector('.nav-link:nth-child(4)').classList.add('active');renderUsuarios();}
+  if(name==='arco'){document.querySelector('.nav-link:nth-child(5)').classList.add('active');}
+}
+
+function toggleRole() {
+  currentRole = currentRole==='Supervisor'?'Operador':'Supervisor';
+  document.getElementById('role-badge').textContent = currentRole.toUpperCase();
+  document.getElementById('user-avatar').textContent = currentRole==='Supervisor'?'JS':'MG';
+}
+
+let currentPage = 1;
+const PAGE_SIZE = 20;
+
+function renderListado() {
+  const tbody=document.getElementById('envios-tbody');
+  const empty=document.getElementById('empty-listado');
+  tbody.innerHTML='';
+  document.getElementById('total-count').textContent=envios.length;
+  document.getElementById('transito-count').textContent=envios.filter(e=>e.estado==='En Tránsito').length;
+  document.getElementById('entregado-count').textContent=envios.filter(e=>e.estado==='Entregado').length;
+  document.getElementById('preparacion-count').textContent=envios.filter(e=>e.estado==='En Preparación').length;
+  if(envios.length===0){empty.style.display='block';document.getElementById('pagination-controls').innerHTML='';return;}
+  empty.style.display='none';
+  const sorted=[...envios].reverse();
+  const totalPages=Math.ceil(sorted.length/PAGE_SIZE);
+  if(currentPage>totalPages)currentPage=totalPages;
+  const start=(currentPage-1)*PAGE_SIZE;
+  const pageItems=sorted.slice(start,start+PAGE_SIZE);
+  pageItems.forEach(e=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="tracking-id">${e.id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td><td class="td-muted">${e.fecha}</td>`;
+    tr.title='Ver detalle';
+    tr.onclick=()=>{fromSearch=false;verDetalle(e.id);};
+    tbody.appendChild(tr);
+  });
+  // Pagination controls
+  let pagHtml=`<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;font-size:13px;color:var(--text-muted)">`;
+  pagHtml+=`<span>Mostrando ${start+1}–${Math.min(start+PAGE_SIZE,sorted.length)} de ${sorted.length} envíos</span>`;
+  pagHtml+=`<div style="display:flex;gap:6px">`;
+  if(currentPage>1) pagHtml+=`<button class="btn btn-ghost btn-sm" onclick="currentPage=1;renderListado()">«</button><button class="btn btn-ghost btn-sm" onclick="currentPage--;renderListado()">‹</button>`;
+  pagHtml+=`<span style="padding:6px 12px;font-family:var(--mono)">${currentPage}/${totalPages}</span>`;
+  if(currentPage<totalPages) pagHtml+=`<button class="btn btn-ghost btn-sm" onclick="currentPage++;renderListado()">›</button><button class="btn btn-ghost btn-sm" onclick="currentPage=${totalPages};renderListado()">»</button>`;
+  pagHtml+=`</div></div>`;
+  document.getElementById('pagination-controls').innerHTML=pagHtml;
+}
+
+function resetForm() {
+  ['f-remitente','f-destinatario','f-peso','f-obs','f-origen-ciudad','f-origen-calle','f-destino-ciudad','f-destino-calle','f-tel-destinatario'].forEach(id=>{document.getElementById(id).value='';document.getElementById(id).classList.remove('error');});
+  document.getElementById('f-origen').selectedIndex=0;document.getElementById('f-origen').classList.remove('error');
+  document.getElementById('f-destino').selectedIndex=0;document.getElementById('f-destino').classList.remove('error');
+  document.getElementById('f-tipo').selectedIndex=0;
+  document.getElementById('form-error').style.display='none';
+  document.getElementById('tracking-preview').textContent='LT-2026-'+String(nextNum).padStart(4,'0');
+}
+
+function crearEnvio() {
+  const rem=document.getElementById('f-remitente').value.trim();
+  const dest=document.getElementById('f-destinatario').value.trim();
+  const orig=document.getElementById('f-origen').value;
+  const origCiudad=document.getElementById('f-origen-ciudad').value.trim();
+  const origCalle=document.getElementById('f-origen-calle').value.trim();
+  const dst=document.getElementById('f-destino').value;
+  const dstCiudad=document.getElementById('f-destino-ciudad').value.trim();
+  const dstCalle=document.getElementById('f-destino-calle').value.trim();
+  const telDest=document.getElementById('f-tel-destinatario').value.trim();
+  // Clear previous errors
+  ['f-remitente','f-destinatario','f-origen','f-origen-ciudad','f-origen-calle','f-destino','f-destino-ciudad','f-destino-calle'].forEach(id=>document.getElementById(id).classList.remove('error'));
+  let hasError=false;
+  if(!rem){document.getElementById('f-remitente').classList.add('error');hasError=true;}
+  if(!dest){document.getElementById('f-destinatario').classList.add('error');hasError=true;}
+  if(!orig){document.getElementById('f-origen').classList.add('error');hasError=true;}
+  if(!origCiudad){document.getElementById('f-origen-ciudad').classList.add('error');hasError=true;}
+  if(!origCalle){document.getElementById('f-origen-calle').classList.add('error');hasError=true;}
+  if(!dst){document.getElementById('f-destino').classList.add('error');hasError=true;}
+  if(!dstCiudad){document.getElementById('f-destino-ciudad').classList.add('error');hasError=true;}
+  if(!dstCalle){document.getElementById('f-destino-calle').classList.add('error');hasError=true;}
+  if(hasError){document.getElementById('form-error').style.display='block';return;}
+  document.getElementById('form-error').style.display='none';
+  const id='LT-2026-'+String(nextNum).padStart(4,'0');
+  nextNum++;
+  const now=new Date();
+  const ts=now.toISOString().slice(0,10)+' '+now.toTimeString().slice(0,5);
+  const user=loggedUser?loggedUser.username:'op.desconocido';
+  const origenFull=orig+', '+origCiudad+', '+origCalle;
+  const destinoFull=dst+', '+dstCiudad+', '+dstCalle;
+  envios.push({id,remitente:rem,destinatario:dest,origen:origenFull,destino:destinoFull,telDestinatario:telDest,tipo:document.getElementById('f-tipo').value,peso:document.getElementById('f-peso').value||'0',obs:document.getElementById('f-obs').value,estado:'Creado',fecha:now.toISOString().slice(0,10),historial:[{estado:'Creado',ts,usuario:user}]});
+  lastCreated=id;
+  document.getElementById('modal-tracking-id').textContent=id;
+  document.getElementById('success-modal').classList.add('show');
+}
+
+function closeModal(){document.getElementById('success-modal').classList.remove('show');}
+
+function renderSearchInit() {
+  document.getElementById('search-input').value='';
+  document.getElementById('filter-estado').value='';
+  buscar();
+}
+
+function buscar() {
+  const q=document.getElementById('search-input').value.trim().toLowerCase();
+  const estado=document.getElementById('filter-estado').value;
+  const tbody=document.getElementById('search-tbody');
+  const empty=document.getElementById('empty-busqueda');
+  const count=document.getElementById('search-results-count');
+  tbody.innerHTML='';
+  if(!q&&!estado){
+    empty.style.display='block';
+    empty.innerHTML='<div class="empty-icon">🔍</div><div>Ingresá un término o seleccioná un estado para buscar</div>';
+    count.textContent='';
+    return;
+  }
+  if(!q&&estado){
+    const all=envios.filter(e=>e.estado===estado);
+    count.textContent=`${all.length} resultado${all.length!==1?'s':''} encontrado${all.length!==1?'s':''}`;
+    if(all.length===0){empty.style.display='block';empty.innerHTML='<div class="empty-icon">😞</div><div>No se encontraron envíos con ese estado</div>';return;}
+    empty.style.display='none';
+    all.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td><span class="tracking-id">${e.id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.origen}</td><td class="td-muted">${e.destino}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td>`;tr.title='Ver detalle';tr.onclick=()=>{fromSearch=true;verDetalle(e.id);};tbody.appendChild(tr);});return;
+  }
+  const results=envios.filter(e=>{
+    const mq=!q||e.id.toLowerCase().includes(q)||e.destinatario.toLowerCase().includes(q)||e.remitente.toLowerCase().includes(q);
+    const me=!estado||e.estado===estado;
+    return mq&&me;
+  });
+  count.textContent=`${results.length} resultado${results.length!==1?'s':''} encontrado${results.length!==1?'s':''}`;
+  if(results.length===0){empty.style.display='block';empty.innerHTML='<div class="empty-icon">😞</div><div>No se encontraron envíos con esos criterios</div>';return;}
+  empty.style.display='none';
+  results.forEach(e=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="tracking-id">${e.id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.origen}</td><td class="td-muted">${e.destino}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td>`;
+    tr.title='Ver detalle';
+    tr.onclick=()=>{fromSearch=true;verDetalle(e.id);};
+    tbody.appendChild(tr);
+  });
+}
+
+function clearSearch(){document.getElementById('search-input').value='';document.getElementById('filter-estado').value='';buscar();}
+
+function verDetalle(id) {
+  const e=envios.find(x=>x.id===id);
+  if(!e)return;
+  const backBtn=document.getElementById('back-from-detail');
+  backBtn.textContent='← Volver a '+(fromSearch?'Búsqueda':'Dashboard');
+  backBtn.onclick=()=>showScreen(fromSearch?'busqueda':'listado');
+
+  const estados=['Creado','En Preparación','En Tránsito','Entregado'];
+  const ci=estados.indexOf(e.estado);
+  const isSup=currentRole==='Supervisor';
+
+  let tlHtml=e.historial.map((h,i)=>`<div class="timeline-item"><div class="timeline-dot ${i<e.historial.length-1?'dot-done':'dot-current'}"></div><div class="timeline-content"><div class="timeline-state">${h.estado}</div><div class="timeline-meta">${h.ts} · ${h.usuario}</div>${h.obs?`<div class="timeline-meta" style="color:var(--text-muted);font-style:italic;margin-top:3px">💬 ${h.obs}</div>`:''}</div></div>`).join('');
+  tlHtml+=estados.slice(ci+1).map(p=>`<div class="timeline-item"><div class="timeline-dot dot-pending"></div><div class="timeline-content"><div class="timeline-state" style="color:var(--text-dim)">${p}</div><div class="timeline-meta">Pendiente</div></div></div>`).join('');
+
+  const next=ci<3?estados[ci+1]:null;
+  let actionBlock='';
+  if(isSup&&next){
+    const flowNodes=estados.map((s,i)=>`<div class="state-node sn-${slug(s)} ${i===ci?'sn-active':''}">${s}</div>${i<3?'<span class="state-arrow">→</span>':''}`).join('');
+    actionBlock=`<div class="card mt-16"><div class="card-title">Cambiar Estado</div><div class="role-notice">🔐 Acción de Supervisor — se registrará fecha/hora y usuario automáticamente.</div><div class="state-flow">${flowNodes}</div><button class="btn btn-primary" onclick="cambiarEstado('${e.id}','${next}')">Avanzar a "${next}" →</button></div>`;
+  } else if(e.estado==='Entregado'){
+    actionBlock=`<div class="card mt-16" style="border-color:rgba(64,240,160,0.3)"><div style="display:flex;align-items:center;gap:10px;color:var(--success)"><span style="font-size:20px">✓</span><span style="font-weight:600">Envío completado — estado final</span></div></div>`;
+  } else if(!isSup&&next){
+    actionBlock=`<div class="card mt-16"><div class="role-notice" style="background:rgba(240,224,64,0.06);border-color:rgba(240,224,64,0.2);color:var(--accent)">⚠ El cambio de estado requiere rol Supervisor. Tu rol actual es Operador.</div></div>`;
+  }
+
+  document.getElementById('detalle-content').innerHTML=`
+    <div class="detail-header">
+      <div><div style="font-size:12px;color:var(--text-dim);font-family:var(--mono);margin-bottom:6px">TRACKING ID</div><div class="detail-tracking">${e.id}</div></div>
+      <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+      <div>
+        <div class="card">
+          <div class="card-title">Datos del Envío</div>
+          <div class="detail-grid">
+            <div class="detail-field"><div class="detail-label">Remitente</div><div class="detail-value">${e.remitente}</div></div>
+            <div class="detail-field"><div class="detail-label">Destinatario</div><div class="detail-value">${e.destinatario}</div></div>
+            <div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Dirección de Origen</div><div class="detail-value">${e.origen}</div></div>
+            <div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Dirección de Destino</div><div class="detail-value">${e.destino}</div></div>
+            ${e.telDestinatario?`<div class="detail-field"><div class="detail-label">Teléfono Destinatario</div><div class="detail-value">${e.telDestinatario}</div></div>`:''}
+            <div class="detail-field"><div class="detail-label">Tipo</div><div class="detail-value">${e.tipo}</div></div>
+            <div class="detail-field"><div class="detail-label">Peso</div><div class="detail-value">${e.peso} kg</div></div>
+            ${e.obs?`<div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Observaciones</div><div class="detail-value">${e.obs}</div></div>`:''}
+          </div>
+        </div>
+        ${actionBlock}
+      </div>
+      <div class="card"><div class="card-title">Historial de Estados</div><div class="timeline">${tlHtml}</div></div>
+    </div>`;
+  showScreen('detalle');
+}
+
+let pendingEstado={id:null,nuevo:null};
+
+function cambiarEstado(id,nuevoEstado) {
+  const e=envios.find(x=>x.id===id);
+  if(!e)return;
+  pendingEstado={id,nuevo:nuevoEstado};
+  document.getElementById('obs-estado-input').value='';
+  const badge=(s)=>`<span class="badge ${badgeClass(s)}">${s.toUpperCase()}</span>`;
+  document.getElementById('obs-state-transition').innerHTML=badge(e.estado)+'<span class="arrow">→</span>'+badge(nuevoEstado);
+  document.getElementById('obs-modal').classList.add('show');
+}
+
+function closeObsModal() {
+  document.getElementById('obs-modal').classList.remove('show');
+  pendingEstado={id:null,nuevo:null};
+}
+
+function confirmarCambioEstado() {
+  const {id,nuevo}=pendingEstado;
+  if(!id)return;
+  const e=envios.find(x=>x.id===id);
+  if(!e)return;
+  const now=new Date();
+  const ts=now.toISOString().slice(0,10)+' '+now.toTimeString().slice(0,5);
+  const obsVal=document.getElementById('obs-estado-input').value.trim();
+  const usuario=loggedUser?loggedUser.username:'op.desconocido';
+  e.estado=nuevo;
+  e.historial.push({estado:nuevo,ts,usuario,obs:obsVal});
+  document.getElementById('obs-modal').classList.remove('show');
+  verDetalle(id);
+}
+
+function badgeClass(e){
+  if(e==='Creado')return'badge-creado';
+  if(e==='En Preparación')return'badge-preparacion';
+  if(e==='En Tránsito')return'badge-transito';
+  if(e==='Entregado')return'badge-entregado';
+  return'';
+}
+
+function slug(e){
+  if(e==='Creado')return'creado';
+  if(e==='En Preparación')return'preparacion';
+  if(e==='En Tránsito')return'transito';
+  if(e==='Entregado')return'entregado';
+  return'';
+}
+
+
+// ── Usuarios mock ────────────────────────────────────────────────────────────
+let usuarios = [
+  { id:1, username:'sup.montero', nombre:'Juan Sup. Montero', rol:'Supervisor', activo:true },
+  { id:2, username:'op.gonzalez', nombre:'María González', rol:'Operador', activo:true },
+  { id:3, username:'op.ramirez', nombre:'Carlos Ramírez', rol:'Operador', activo:true },
+  { id:4, username:'op.garcia', nombre:'Laura García', rol:'Operador', activo:false },
+];
+let nextUserId = 5;
+
+function showNuevoUsuarioForm() {
+  if(currentRole !== 'Administrador') return;
+  ['nu-nombre','nu-username'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('nu-rol').selectedIndex=0;
+  document.getElementById('nu-activo').selectedIndex=0;
+  document.getElementById('nu-error').style.display='none';
+  document.getElementById('nuevo-usuario-form').style.display='block';
+}
+
+function crearUsuario() {
+  const nombre = document.getElementById('nu-nombre').value.trim();
+  const username = document.getElementById('nu-username').value.trim();
+  const rol = document.getElementById('nu-rol').value;
+  if(!nombre||!username||!rol){document.getElementById('nu-error').style.display='block';return;}
+  document.getElementById('nu-error').style.display='none';
+  const activo = document.getElementById('nu-activo').value === 'true';
+  usuarios.push({id:nextUserId++, username, nombre, rol, activo});
+  document.getElementById('nuevo-usuario-form').style.display='none';
+  renderUsuarios();
+}
+
+function toggleUsuarioActivo(id) {
+  const u = usuarios.find(x=>x.id===id);
+  if(!u) return;
+  if(loggedUser && u.username === loggedUser.username) {
+    alert('No podés desactivar tu propia cuenta.');
+    renderUsuarios(); // re-render to reset toggle visually
+    return;
+  }
+  u.activo = !u.activo;
+  renderUsuarios();
+}
+
+function renderUsuarios() {
+  const isAdmin = currentRole === 'Administrador';
+  document.getElementById('admin-only-notice').style.display = isAdmin ? 'none' : 'flex';
+  document.getElementById('btn-nuevo-usuario').style.display = isAdmin ? '' : 'none';
+  document.getElementById('nuevo-usuario-form').style.display = 'none';
+  const list = document.getElementById('usuarios-list');
+  list.innerHTML = '';
+  usuarios.forEach(u => {
+    const initials = u.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const rolColor = u.rol==='Supervisor' ? 'accent2' : 'text-muted';
+    const div = document.createElement('div');
+    div.className = 'user-row';
+    div.innerHTML = `
+      <div class="user-info">
+        <div class="user-avatar-lg" style="border-color:${u.activo?'var(--success)':'var(--border)'}">${initials}</div>
+        <div>
+          <div class="user-name">${u.nombre}</div>
+          <div class="user-meta">${u.username} · <span style="color:var(--${rolColor})">${u.rol}</span></div>
+        </div>
+      </div>
+      <div class="user-actions">
+        <span style="font-size:12px;color:var(--text-muted);margin-right:8px">${u.activo?'<span style="color:var(--success)">● Activo</span>':'<span style="color:var(--text-dim)">○ Inactivo</span>'}</span>
+        ${isAdmin ? `<label class="toggle-switch" title="${u.activo?'Desactivar':'Activar'} usuario"><input type="checkbox" ${u.activo?'checked':''} onchange="toggleUsuarioActivo(${u.id})"><span class="toggle-slider"></span></label>` : ''}
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── ARCO ─────────────────────────────────────────────────────────────────────
+let arcoSolicitudes = [];
+
+function enviarARCO() {
+  const nombre = document.getElementById('arco-nombre').value.trim();
+  const email = document.getElementById('arco-email').value.trim();
+  const tipo = document.getElementById('arco-tipo').value;
+  const desc = document.getElementById('arco-desc').value.trim();
+  document.getElementById('arco-error').style.display='none';
+  document.getElementById('arco-success').style.display='none';
+  if(!nombre||!email||!tipo||!desc){document.getElementById('arco-error').style.display='block';return;}
+  const tracking = document.getElementById('arco-tracking').value.trim();
+  arcoSolicitudes.push({nombre,email,tipo,tracking,desc,fecha:new Date().toISOString().slice(0,10)});
+  document.getElementById('arco-nombre').value='';
+  document.getElementById('arco-email').value='';
+  document.getElementById('arco-tipo').selectedIndex=0;
+  document.getElementById('arco-tracking').value='';
+  document.getElementById('arco-desc').value='';
+  document.getElementById('arco-success').style.display='block';
+}
+
+
+// ── Auth mock ─────────────────────────────────────────────────────────────────
+const credenciales = {
+  'op.gonzalez':  { pass: 'op1234',  nombre: 'María González',    rol: 'Operador',       initials: 'MG' },
+  'op.ramirez':   { pass: 'op1234',  nombre: 'Carlos Ramírez',    rol: 'Operador',       initials: 'CR' },
+  'sup.montero':  { pass: 'sup1234', nombre: 'Juan Montero',      rol: 'Supervisor',     initials: 'JM' },
+  'adm.sistema':  { pass: 'adm1234', nombre: 'Admin Sistema',     rol: 'Administrador',  initials: 'AS' },
+};
+let loggedUser = null;
+
+function fillLogin(user, pass) {
+  document.getElementById('login-username').value = user;
+  document.getElementById('login-password').value = pass;
+  document.getElementById('login-error').classList.remove('show');
+}
+
+function doLogin() {
+  const user = document.getElementById('login-username').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const cred = credenciales[user];
+  if (!cred || cred.pass !== pass) {
+    document.getElementById('login-error').classList.add('show');
+    document.getElementById('login-error').textContent = '⚠ Usuario o contraseña incorrectos.';
+    return;
+  }
+  // Check if user is active in usuarios list
+  const usuarioData = usuarios.find(u => u.username === user);
+  if (usuarioData && !usuarioData.activo) {
+    document.getElementById('login-error').classList.add('show');
+    document.getElementById('login-error').textContent = '⚠ Tu cuenta está desactivada. Contactá al administrador.';
+    return;
+  }
+  document.getElementById('login-error').classList.remove('show');
+  loggedUser = { username: user, ...cred };
+  currentRole = cred.rol;
+
+  // Update nav user info
+  document.getElementById('role-badge').textContent = cred.rol.toUpperCase();
+  document.getElementById('user-avatar').textContent = cred.initials;
+
+  // Show app, hide login
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-nav').style.display = 'flex';
+  document.getElementById('app-content').style.display = 'block';
+
+  showScreen('listado');
+}
+
+function doLogout() {
+  loggedUser = null;
+  currentRole = 'Operador';
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-nav').style.display = 'none';
+  document.getElementById('app-content').style.display = 'none';
+}
+
+renderListado();
+document.getElementById('tracking-preview').textContent='LT-2026-'+String(nextNum).padStart(4,'0');
+
+// ── Bulk Load Screen ────────────────────────────────────────────────────────
+document.getElementById('app-content').insertAdjacentHTML('beforeend', `
+<div class="screen" id="screen-bulk">
+  <div class="page-header">
+    <div class="flex-between">
+      <div>
+        <h1>📦 Carga por Lote</h1>
+        <p>Generá envíos de prueba de forma masiva para testear el sistema (Mock Data / Datos Semilla)</p>
+      </div>
+    </div>
+  </div>
+  <div style="margin-bottom:20px">
+    <div class="card">
+      <div class="card-title">Generador automático de envíos</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:20px">
+        Generá envíos simulados con datos realistas (remitentes, destinatarios, direcciones y estados aleatorios en todo el territorio argentino).
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Cantidad de envíos a generar</label>
+        <div style="display:flex;gap:12px;align-items:center">
+          <input type="number" id="bulk-count" value="50" min="1" max="500" style="width:120px">
+          <button class="btn btn-primary" onclick="generarEnviosLote()">Generar →</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bulk-count').value=10;generarEnviosLote()">+10</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bulk-count').value=25;generarEnviosLote()">+25</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bulk-count').value=50;generarEnviosLote()">+50</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bulk-count').value=100;generarEnviosLote()">+100</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0">Estado de la base de datos mock</div>
+      <button class="btn btn-ghost btn-sm" onclick="limpiarEnvios()" style="color:var(--danger);border-color:rgba(240,80,64,0.3)">🗑 Limpiar todos</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono)" id="bulk-total">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Total</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:24px;font-weight:800;color:var(--text-muted);font-family:var(--mono)" id="bulk-creado">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Creado</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono)" id="bulk-prep">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">En Preparación</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:24px;font-weight:800;color:var(--accent2);font-family:var(--mono)" id="bulk-transit">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">En Tránsito</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
+        <div style="font-size:24px;font-weight:800;color:var(--success);font-family:var(--mono)" id="bulk-entreg">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Entregado</div>
+      </div>
+    </div>
+  </div>
+  <div class="card mt-16" style="border-color:rgba(160,120,240,0.2)">
+    <div class="card-title" style="color:#a78bfa">ℹ Mock API — Documentación</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+      <div style="margin-bottom:12px">Este prototipo simula una <strong style="color:var(--text)">Mock API REST</strong> con los datos almacenados en memoria (array JavaScript). Las operaciones CRUD disponibles son:</div>
+      <div style="background:var(--surface2);border-radius:8px;padding:16px;font-family:var(--mono);font-size:12px;line-height:2">
+        <div><span style="color:#4ade80;font-weight:700">GET</span>    /api/envios ........... Listado paginado de envíos</div>
+        <div><span style="color:#4ade80;font-weight:700">GET</span>    /api/envios/:id ....... Detalle de un envío por tracking ID</div>
+        <div><span style="color:#60a5fa;font-weight:700">POST</span>   /api/envios ........... Alta de envío con tracking ID automático</div>
+        <div><span style="color:#fb923c;font-weight:700">PUT</span>    /api/envios/:id ....... Edición de envío en estado Creado</div>
+        <div><span style="color:#fb923c;font-weight:700">PATCH</span>  /api/envios/:id/estado  Cambio de estado (solo Supervisor)</div>
+        <div><span style="color:#f05040;font-weight:700">DELETE</span> /api/envios/:id ....... Eliminación (solo Admin, estado Creado)</div>
+        <div style="margin-top:8px"><span style="color:#4ade80;font-weight:700">GET</span>    /api/envios/search?q=   Búsqueda por tracking ID o nombre</div>
+        <div><span style="color:#60a5fa;font-weight:700">POST</span>   /api/envios/bulk ...... Carga masiva de envíos (lote)</div>
+      </div>
+      <div style="margin-top:12px">En Semana 3, estos endpoints se implementarán como una API real con persistencia en base de datos. En esta etapa, los datos se almacenan en un array JavaScript en memoria como datos semilla.</div>
+    </div>
+  </div>
+</div>
+`);
+
+// Bulk load data generators
+const nombresRemitentes = [
+  'Distribuidora Palermo S.A.','Logística Sur SRL','Grupo Norte Express','TechStore Argentina','Farmacia del Pueblo','Librería Nacional','Electro Hogar','MegaDistribuciones','Patagonia Logistics','Envíos Rápidos CABA',
+  'Transportes Unión','Correo Federal S.A.','Industrial del Norte','AgriPack SRL','Mercado Express','ViniTech S.A.','ToolBox Argentina','Papelera del Centro','FrioExpress SA','MotoEnvíos BA'
+];
+const nombresDestinatarios = [
+  'Carlos Romero','Ana Martínez','Pedro Vidal','Lucía Fernández','Jorge López','Marta Rodríguez','Diego Sánchez','Valentina García','Santiago Moreno','Camila Díaz',
+  'Matías Ruiz','Florencia Torres','Nicolás Pereyra','Julieta Álvarez','Tomás Castro','Mariana Giménez','Agustín Medina','Paula Herrera','Lucas Acosta','Carolina Figueroa',
+  'Roberto Méndez','Soledad Navarro','Fernando Paz','Daniela Suárez','Emiliano Rojas','Micaela Muñoz','Joaquín Domínguez','Romina Molina','Gabriel Ortiz','Andrea Villalba'
+];
+const provincias = ['Buenos Aires','CABA','Córdoba','Santa Fe','Mendoza','Tucumán','Salta','Neuquén','Entre Ríos','Misiones','Chaco','Corrientes','Santiago del Estero','San Juan','Jujuy','Río Negro','Formosa','Chubut','San Luis','Catamarca','La Rioja','La Pampa','Santa Cruz','Tierra del Fuego'];
+const ciudades = {
+  'Buenos Aires':['La Plata','Mar del Plata','Bahía Blanca','Tandil','Quilmes','Avellaneda','Lanús','Morón'],
+  'CABA':['Palermo','Belgrano','Recoleta','San Telmo','Caballito','Flores','Villa Urquiza','Barracas'],
+  'Córdoba':['Córdoba','Villa María','Río Cuarto','Carlos Paz','Bell Ville'],
+  'Santa Fe':['Rosario','Santa Fe','Rafaela','Venado Tuerto','Reconquista'],
+  'Mendoza':['Mendoza','San Rafael','Godoy Cruz','Maipú','Luján de Cuyo'],
+  'Tucumán':['San Miguel de Tucumán','Yerba Buena','Tafí Viejo','Banda del Río Salí'],
+  'Salta':['Salta','San Lorenzo','Tartagal','Orán'],
+  'Neuquén':['Neuquén','San Martín de los Andes','Zapala','Plottier'],
+  'Entre Ríos':['Paraná','Concordia','Gualeguaychú','Concepción del Uruguay'],
+  'Misiones':['Posadas','Oberá','Eldorado','Iguazú'],
+  'Chaco':['Resistencia','Barranqueras','Sáenz Peña'],
+  'Corrientes':['Corrientes','Goya','Mercedes'],
+  'Santiago del Estero':['Santiago del Estero','La Banda','Termas de Río Hondo'],
+  'San Juan':['San Juan','Rawson','Rivadavia'],
+  'Jujuy':['San Salvador de Jujuy','Palpalá','Libertador Gral. San Martín'],
+  'Río Negro':['Viedma','Bariloche','General Roca','Cipolletti'],
+  'Formosa':['Formosa','Clorinda'],
+  'Chubut':['Rawson','Trelew','Comodoro Rivadavia','Esquel'],
+  'San Luis':['San Luis','Villa Mercedes','Merlo'],
+  'Catamarca':['San Fernando del Valle de Catamarca','Tinogasta'],
+  'La Rioja':['La Rioja','Chilecito'],
+  'La Pampa':['Santa Rosa','General Pico','Toay'],
+  'Santa Cruz':['Río Gallegos','Caleta Olivia','El Calafate'],
+  'Tierra del Fuego':['Ushuaia','Río Grande','Tolhuin']
+};
+const calles = ['Av. San Martín','Av. Rivadavia','Belgrano','Mitre','Sarmiento','Av. Corrientes','25 de Mayo','9 de Julio','Urquiza','Moreno','Lavalle','Güemes','Alberdi','Pellegrini','Colón','Italia','España','Entre Ríos','Tucumán','Catamarca'];
+const tiposPaquete = ['Caja estándar','Sobre','Pallet','Frágil','Refrigerado'];
+const estados = ['Creado','En Preparación','En Tránsito','Entregado'];
+const operadores = ['op.gonzalez','op.ramirez','op.garcia','sup.montero'];
+
+function randomFrom(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function randomInt(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
+
+function generarEnvioAleatorio() {
+  const provOrigen = randomFrom(provincias);
+  const provDestino = randomFrom(provincias);
+  const ciudadOrigen = randomFrom(ciudades[provOrigen]||['Centro']);
+  const ciudadDestino = randomFrom(ciudades[provDestino]||['Centro']);
+  const calleOrig = randomFrom(calles)+' '+randomInt(100,9999);
+  const calleDest = randomFrom(calles)+' '+randomInt(100,9999);
+  const estadoIdx = randomInt(0,3);
+  const estado = estados[estadoIdx];
+  const dia = randomInt(1,28);
+  const mes = randomInt(1,3);
+  const fecha = `2026-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  
+  // Build historial up to current state
+  let historial = [];
+  const baseHour = randomInt(7,18);
+  for(let i=0;i<=estadoIdx;i++) {
+    const h = baseHour + i*2;
+    const m = randomInt(0,59);
+    historial.push({
+      estado: estados[i],
+      ts: `${fecha} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`,
+      usuario: i===0 ? randomFrom(['op.gonzalez','op.ramirez','op.garcia']) : (i>0 ? 'sup.montero' : randomFrom(operadores))
+    });
+  }
+  
+  const id = 'LT-2026-'+String(nextNum).padStart(4,'0');
+  nextNum++;
+  
+  return {
+    id,
+    remitente: randomFrom(nombresRemitentes),
+    destinatario: randomFrom(nombresDestinatarios),
+    origen: provOrigen+', '+ciudadOrigen+', '+calleOrig,
+    destino: provDestino+', '+ciudadDestino+', '+calleDest,
+    telDestinatario: Math.random()>0.3 ? `+54 9 ${randomInt(100,999)} ${randomInt(100,999)}-${String(randomInt(0,9999)).padStart(4,'0')}` : '',
+    tipo: randomFrom(tiposPaquete),
+    peso: (randomInt(1,500)/10).toFixed(1),
+    obs: Math.random()>0.7 ? randomFrom(['Frágil','Entregar en horario laboral','Dejar en portería','Llamar antes de entregar','No apilar','Requiere firma']) : '',
+    estado,
+    fecha,
+    historial
+  };
+}
+
+function generarEnviosLote() {
+  const n = parseInt(document.getElementById('bulk-count').value) || 50;
+  const cant = Math.min(Math.max(n,1),500);
+  for(let i=0;i<cant;i++) {
+    envios.push(generarEnvioAleatorio());
+  }
+  actualizarBulkStats();
+  document.getElementById('bulk-success-msg').textContent = `Se generaron ${cant} envíos simulados correctamente. Total en sistema: ${envios.length}`;
+  document.getElementById('bulk-success-modal').classList.add('show');
+}
+
+function actualizarBulkStats() {
+  document.getElementById('bulk-total').textContent = envios.length;
+  document.getElementById('bulk-creado').textContent = envios.filter(e=>e.estado==='Creado').length;
+  document.getElementById('bulk-prep').textContent = envios.filter(e=>e.estado==='En Preparación').length;
+  document.getElementById('bulk-transit').textContent = envios.filter(e=>e.estado==='En Tránsito').length;
+  document.getElementById('bulk-entreg').textContent = envios.filter(e=>e.estado==='Entregado').length;
+}
+
+function limpiarEnvios() {
+  if(!confirm('¿Estás seguro de eliminar todos los envíos? Esta acción no se puede deshacer.')) return;
+  envios.length = 0;
+  nextNum = 1;
+  actualizarBulkStats();
+  renderListado();
+}
+
+// Update showScreen to handle bulk
+const _origShowScreen = showScreen;
+showScreen = function(name) {
+  _origShowScreen(name);
+  if(name==='bulk') actualizarBulkStats();
+};
+</script>
+
+<!-- IA SCREEN -->
+<script>
+// Inject IA screen into app-content
+document.getElementById('app-content').insertAdjacentHTML('beforeend', `
+<div class="screen" id="screen-ia">
+  <div style="max-width:760px;margin:0 auto;padding:0 0 40px">
+    <div style="margin-bottom:24px">
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px">🧠 Predicción de Demoras</h2>
+      <p style="font-size:13px;color:var(--text-muted)">Modelo de Machine Learning entrenado con datos históricos de envíos de LogiTrack</p>
+    </div>
+
+    <!-- Model metrics card -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Métricas del modelo (última versión)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#4ade80;font-family:var(--mono)">82%</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Accuracy</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#60a5fa;font-family:var(--mono)">0.79</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">F1-Score</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#a78bfa;font-family:var(--mono)">0.81</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Precisión</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#fb923c;font-family:var(--mono)">500</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Registros dataset</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Predictor -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Simular predicción</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Provincia origen</label>
+          <select id="ia-origen" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
+            <option>Buenos Aires</option><option>CABA</option><option>Córdoba</option>
+            <option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option>
+            <option>Salta</option><option>Neuquén</option><option>Chubut</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Provincia destino</label>
+          <select id="ia-destino" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
+            <option>Tierra del Fuego</option><option>Santa Cruz</option><option>Chubut</option>
+            <option>Río Negro</option><option>Neuquén</option><option>La Pampa</option>
+            <option>Buenos Aires</option><option>CABA</option><option>Córdoba</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Peso (kg)</label>
+          <input id="ia-peso" type="number" value="12" min="0.1" step="0.1" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Tipo de envío</label>
+          <select id="ia-tipo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
+            <option>Estándar</option><option>Express</option><option>Frágil</option><option>Documento</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="predecir()" style="background:#4ade80;color:#000;border:none;border-radius:8px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;width:100%">🔍 Predecir demora</button>
+
+      <!-- Result -->
+      <div id="ia-resultado" style="display:none;margin-top:16px;border-radius:10px;padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div id="ia-icono" style="font-size:32px"></div>
+          <div>
+            <div id="ia-titulo" style="font-size:16px;font-weight:700"></div>
+            <div id="ia-subtitulo" style="font-size:12px;margin-top:3px;opacity:0.8"></div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:11px;opacity:0.7;margin-bottom:2px">Confianza</div>
+            <div id="ia-confianza" style="font-size:20px;font-weight:800;font-family:var(--mono)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature importance -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Variables más influyentes en el modelo</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--text)">Distancia origen–destino</span><span style="color:#4ade80;font-family:var(--mono);font-weight:600">38%</span></div>
+          <div style="background:var(--surface2);border-radius:4px;height:6px"><div style="background:#4ade80;width:38%;height:100%;border-radius:4px"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--text)">Peso del paquete</span><span style="color:#60a5fa;font-family:var(--mono);font-weight:600">27%</span></div>
+          <div style="background:var(--surface2);border-radius:4px;height:6px"><div style="background:#60a5fa;width:27%;height:100%;border-radius:4px"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--text)">Tipo de envío</span><span style="color:#a78bfa;font-family:var(--mono);font-weight:600">21%</span></div>
+          <div style="background:var(--surface2);border-radius:4px;height:6px"><div style="background:#a78bfa;width:21%;height:100%;border-radius:4px"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--text)">Día de la semana</span><span style="color:#fb923c;font-family:var(--mono);font-weight:600">14%</span></div>
+          <div style="background:var(--surface2);border-radius:4px;height:6px"><div style="background:#fb923c;width:14%;height:100%;border-radius:4px"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`);
+
+// Distancias simuladas entre provincias (para simular predicción)
+const distancias = {
+  'Tierra del Fuego':3200,'Santa Cruz':2800,'Chubut':1900,'Río Negro':1400,
+  'Neuquén':1200,'La Pampa':650,'Buenos Aires':300,'CABA':0,'Córdoba':700,
+  'Santa Fe':500,'Mendoza':1050,'Tucumán':1300,'Salta':1550
+};
+
+function predecir() {
+  const origen = document.getElementById('ia-origen').value;
+  const destino = document.getElementById('ia-destino').value;
+  const peso = parseFloat(document.getElementById('ia-peso').value) || 5;
+  const tipo = document.getElementById('ia-tipo').value;
+
+  // Simulate model logic
+  const dist = Math.abs((distancias[destino]||800) - (distancias[origen]||300));
+  let score = 0;
+  if (dist > 1500) score += 40;
+  else if (dist > 800) score += 20;
+  if (peso > 20) score += 25;
+  else if (peso > 10) score += 10;
+  if (tipo === 'Frágil') score += 15;
+  if (tipo === 'Estándar') score += 5;
+  // Sin componente aleatorio — mismos inputs siempre dan mismo resultado
+
+  const demorado = score >= 40;
+  const confianza = Math.min(95, 65 + Math.abs(score - 40));
+
+  const res = document.getElementById('ia-resultado');
+  res.style.display = 'block';
+
+  if (demorado) {
+    res.style.background = 'rgba(251,146,60,0.1)';
+    res.style.border = '1px solid rgba(251,146,60,0.3)';
+    document.getElementById('ia-icono').textContent = '⚠️';
+    document.getElementById('ia-titulo').innerHTML = '<span style="color:#fb923c">Probable demora</span>';
+    document.getElementById('ia-subtitulo').style.color = '#fb923c';
+    document.getElementById('ia-subtitulo').textContent = 'El modelo predice que este envío tiene alta probabilidad de llegar fuera de plazo.';
+    document.getElementById('ia-confianza').style.color = '#fb923c';
+  } else {
+    res.style.background = 'rgba(74,222,128,0.08)';
+    res.style.border = '1px solid rgba(74,222,128,0.25)';
+    document.getElementById('ia-icono').textContent = '✅';
+    document.getElementById('ia-titulo').innerHTML = '<span style="color:#4ade80">A tiempo</span>';
+    document.getElementById('ia-subtitulo').style.color = '#4ade80';
+    document.getElementById('ia-subtitulo').textContent = 'El modelo predice que este envío llegará dentro del plazo estimado.';
+    document.getElementById('ia-confianza').style.color = '#4ade80';
+  }
+  document.getElementById('ia-confianza').textContent = confianza + '%';
+}
+</script>
+</body>
+</html>
