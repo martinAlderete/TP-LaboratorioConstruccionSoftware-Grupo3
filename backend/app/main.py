@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routers import envios, usuarios, arco
+from app.routers import envios, usuarios, arco, prediccion   
+from app.ml.predictor import cargar_modelo                  
 from app import seed
+
 
 app = FastAPI(
     title="LogiTrack API",
@@ -23,10 +25,14 @@ app.add_middleware(
 def startup():
     Base.metadata.create_all(bind=engine)
     seed.cargar_datos_iniciales()
+    cargar_modelo()  
+
 
 app.include_router(envios.router, prefix="/api/envios", tags=["Envíos"])
 app.include_router(usuarios.router, prefix="/api/usuarios", tags=["Usuarios"])
 app.include_router(arco.router, prefix="/api/arco", tags=["ARCO"])
+app.include_router(prediccion.router, prefix="/api/prediccion", tags=["Predicción IA"])  
+
 
 @app.get("/")
 def root():

@@ -1106,18 +1106,21 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div>
           <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Provincia origen</label>
-          <select id="ia-origen" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
-            <option>Buenos Aires</option><option>CABA</option><option>Córdoba</option>
-            <option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option>
-            <option>Salta</option><option>Neuquén</option><option>Chubut</option>
-          </select>
+          <select id="ia-origen" ...>
+  <option>Buenos Aires</option><option>Córdoba</option><option>Santa Fe</option>
+  <option>Mendoza</option><option>Tucumán</option><option>Salta</option>
+  <option>Entre Ríos</option><option>Misiones</option><option>Neuquén</option>
+  <option>Río Negro</option>
+</select>
+
         </div>
         <div>
           <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Provincia destino</label>
           <select id="ia-destino" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
-            <option>Tierra del Fuego</option><option>Santa Cruz</option><option>Chubut</option>
-            <option>Río Negro</option><option>Neuquén</option><option>La Pampa</option>
-            <option>Buenos Aires</option><option>CABA</option><option>Córdoba</option>
+           <option>Buenos Aires</option><option>Córdoba</option><option>Santa Fe</option>
+  <option>Mendoza</option><option>Tucumán</option><option>Salta</option>
+  <option>Entre Ríos</option><option>Misiones</option><option>Neuquén</option>
+  <option>Río Negro</option>
           </select>
         </div>
         <div>
@@ -1126,9 +1129,11 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
         </div>
         <div>
           <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">Tipo de envío</label>
-          <select id="ia-tipo" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px">
-            <option>Estándar</option><option>Express</option><option>Frágil</option><option>Documento</option>
-          </select>
+          <select id="ia-tipo" ...>
+  <option>Documento</option><option>Caja pequeña</option><option>Caja mediana</option>
+  <option>Caja grande</option><option>Pallet</option>
+</select>
+
         </div>
       </div>
       <button onclick="predecir()" style="background:#4ade80;color:#000;border:none;border-radius:8px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;width:100%">🔍 Predecir demora</button>
@@ -1175,33 +1180,16 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
 </div>
 `);
 
-// Distancias simuladas entre provincias (para simular predicción)
-const distancias = {
-  'Tierra del Fuego':3200,'Santa Cruz':2800,'Chubut':1900,'Río Negro':1400,
-  'Neuquén':1200,'La Pampa':650,'Buenos Aires':300,'CABA':0,'Córdoba':700,
-  'Santa Fe':500,'Mendoza':1050,'Tucumán':1300,'Salta':1550
+// Distancias de referencia desde Buenos Aires (km) — usadas para estimar
+// distancia_km entre provincias antes de enviar al modelo.
+const distanciasRef = {
+  'Buenos Aires': 0, 'Córdoba': 700, 'Santa Fe': 470, 'Mendoza': 1040,
+  'Tucumán': 1310, 'Salta': 1580, 'Entre Ríos': 370,
+  'Misiones': 1230, 'Neuquén': 1190, 'Río Negro': 1050
 };
 
-function predecir() {
-  const origen = document.getElementById('ia-origen').value;
-  const destino = document.getElementById('ia-destino').value;
-  const peso = parseFloat(document.getElementById('ia-peso').value) || 5;
-  const tipo = document.getElementById('ia-tipo').value;
-
-  // Simulate model logic
-  const dist = Math.abs((distancias[destino]||800) - (distancias[origen]||300));
-  let score = 0;
-  if (dist > 1500) score += 40;
-  else if (dist > 800) score += 20;
-  if (peso > 20) score += 25;
-  else if (peso > 10) score += 10;
-  if (tipo === 'Frágil') score += 15;
-  if (tipo === 'Estándar') score += 5;
-  // Sin componente aleatorio — mismos inputs siempre dan mismo resultado
-
-  const demorado = score >= 40;
-  const confianza = Math.min(95, 65 + Math.abs(score - 40));
-
+function _mostrarResultadoIA(demorado, probabilidad) {
+  const pct = Math.round(probabilidad * 100);
   const res = document.getElementById('ia-resultado');
   res.style.display = 'block';
 
@@ -1209,21 +1197,80 @@ function predecir() {
     res.style.background = 'rgba(251,146,60,0.1)';
     res.style.border = '1px solid rgba(251,146,60,0.3)';
     document.getElementById('ia-icono').textContent = '⚠️';
-    document.getElementById('ia-titulo').innerHTML = '<span style="color:#fb923c">Probable demora</span>';
+    document.getElementById('ia-titulo').innerHTML =
+      '<span style="color:#fb923c">Probable demora</span>';
     document.getElementById('ia-subtitulo').style.color = '#fb923c';
-    document.getElementById('ia-subtitulo').textContent = 'El modelo predice que este envío tiene alta probabilidad de llegar fuera de plazo.';
+    document.getElementById('ia-subtitulo').textContent =
+      'El modelo predice que este envío tiene alta probabilidad de llegar fuera de plazo.';
     document.getElementById('ia-confianza').style.color = '#fb923c';
   } else {
     res.style.background = 'rgba(74,222,128,0.08)';
     res.style.border = '1px solid rgba(74,222,128,0.25)';
     document.getElementById('ia-icono').textContent = '✅';
-    document.getElementById('ia-titulo').innerHTML = '<span style="color:#4ade80">A tiempo</span>';
+    document.getElementById('ia-titulo').innerHTML =
+      '<span style="color:#4ade80">A tiempo</span>';
     document.getElementById('ia-subtitulo').style.color = '#4ade80';
-    document.getElementById('ia-subtitulo').textContent = 'El modelo predice que este envío llegará dentro del plazo estimado.';
+    document.getElementById('ia-subtitulo').textContent =
+      'El modelo predice que este envío llegará dentro del plazo estimado.';
     document.getElementById('ia-confianza').style.color = '#4ade80';
   }
-  document.getElementById('ia-confianza').textContent = confianza + '%';
+  document.getElementById('ia-confianza').textContent = pct + '%';
 }
+
+async function predecir() {
+  const origen  = document.getElementById('ia-origen').value;
+  const destino = document.getElementById('ia-destino').value;
+  const peso    = parseFloat(document.getElementById('ia-peso').value) || 5;
+  const tipo    = document.getElementById('ia-tipo').value;
+
+  // Estimar distancia_km a partir de las provincias seleccionadas
+  const dOrigen  = distanciasRef[origen]  ?? 500;
+  const dDestino = distanciasRef[destino] ?? 500;
+  const distancia_km = Math.abs(dOrigen - dDestino) + 100;
+
+  // Estado de carga
+  const btn = document.querySelector('[onclick="predecir()"]');
+  const textoOriginal = btn.textContent;
+  btn.textContent = 'Consultando modelo…';
+  btn.disabled = true;
+
+  const res = document.getElementById('ia-resultado');
+  res.style.display = 'none';
+
+  try {
+    const apiUrl = (window.LOGITRACK_API_URL || 'http://localhost:8000');
+    const resp = await fetch(`${apiUrl}/api/prediccion/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origen,
+        destino,
+        distancia_km,
+        peso_kg:      peso,
+        tipo_paquete: tipo,
+      }),
+    });
+
+    if (!resp.ok) throw new Error(`Error ${resp.status}`);
+    const data = await resp.json();
+    _mostrarResultadoIA(data.demorado, data.probabilidad);
+
+  } catch (err) {
+    res.style.display = 'block';
+    res.style.background = 'rgba(240,80,64,0.08)';
+    res.style.border = '1px solid rgba(240,80,64,0.3)';
+    document.getElementById('ia-icono').textContent = '❌';
+    document.getElementById('ia-titulo').innerHTML =
+      '<span style="color:#f05040">Error al consultar el modelo</span>';
+    document.getElementById('ia-subtitulo').style.color = '#f05040';
+    document.getElementById('ia-subtitulo').textContent = err.message;
+    document.getElementById('ia-confianza').textContent = '';
+  } finally {
+    btn.textContent = textoOriginal;
+    btn.disabled = false;
+  }
+}
+
 </script>
 </body>
 </html>
