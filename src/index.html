@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LogiTrack — Sistema de Gestión de Envíos</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="env.js"></script>
 <style>
   :root {
     --bg: #0f0f11;
@@ -563,429 +564,433 @@
 </div>
 
 <script>
-let currentRole = 'Supervisor';
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API_BASE = window.LOGITRACK_API_URL || 'http://localhost:8000';
+
+// ── Estado global ─────────────────────────────────────────────────────────────
+let currentRole = 'Operador';
+let loggedUser = null;
 let lastCreated = null;
 let fromSearch = false;
-let nextNum = 5;
-
-const envios = [
-  { id:'LT-2026-0001', remitente:'Distribuidora Palermo S.A.', destinatario:'Carlos Romero', origen:'CABA, Buenos Aires, Av. Corrientes 1234', destino:'Córdoba, Córdoba, Av. Colón 567', telDestinatario:'+54 9 351 555-0101', tipo:'Caja estándar', peso:'12.5', obs:'Frágil, manejar con cuidado', estado:'En Tránsito', fecha:'2026-03-15', historial:[
-    {estado:'Creado',ts:'2026-03-15 09:12',usuario:'op.gonzalez'},
-    {estado:'En Preparación',ts:'2026-03-15 10:30',usuario:'op.gonzalez'},
-    {estado:'En Tránsito',ts:'2026-03-16 08:00',usuario:'sup.montero'},
-  ]},
-  { id:'LT-2026-0002', remitente:'Logística Sur SRL', destinatario:'Ana Martínez', origen:'Buenos Aires, Mar del Plata, San Martín 890', destino:'Santa Fe, Rosario, Pellegrini 234', telDestinatario:'+54 9 341 555-0202', tipo:'Sobre', peso:'0.3', obs:'', estado:'Entregado', fecha:'2026-03-14', historial:[
-    {estado:'Creado',ts:'2026-03-14 08:00',usuario:'op.ramirez'},
-    {estado:'En Preparación',ts:'2026-03-14 09:15',usuario:'op.ramirez'},
-    {estado:'En Tránsito',ts:'2026-03-14 14:00',usuario:'sup.montero'},
-    {estado:'Entregado',ts:'2026-03-15 11:20',usuario:'op.ramirez'},
-  ]},
-  { id:'LT-2026-0003', remitente:'Grupo Norte Express', destinatario:'Municipalidad de Salta', origen:'Salta, Salta, Caseros 123', destino:'Tucumán, San Miguel de Tucumán, 24 de Septiembre 450', telDestinatario:'+54 387 421-0000', tipo:'Pallet', peso:'80.0', obs:'Requiere grúa', estado:'En Preparación', fecha:'2026-03-17', historial:[
-    {estado:'Creado',ts:'2026-03-17 07:45',usuario:'op.garcia'},
-    {estado:'En Preparación',ts:'2026-03-17 09:00',usuario:'sup.montero'},
-  ]},
-  { id:'LT-2026-0004', remitente:'TechStore Argentina', destinatario:'Pedro Vidal', origen:'CABA, Buenos Aires, Florida 560', destino:'Mendoza, Mendoza, Aristides Villanueva 789', telDestinatario:'+54 9 261 555-0303', tipo:'Frágil', peso:'3.2', obs:'Equipo electrónico', estado:'Creado', fecha:'2026-03-18', historial:[
-    {estado:'Creado',ts:'2026-03-18 14:20',usuario:'op.gonzalez'},
-  ]},
-];
-
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
-  document.getElementById('screen-'+name).classList.add('active');
-  if(name==='listado'){document.querySelector('.nav-link:nth-child(1)').classList.add('active');renderListado();}
-  if(name==='alta'){document.querySelector('.nav-link:nth-child(2)').classList.add('active');resetForm();}
-  if(name==='busqueda'){document.querySelector('.nav-link:nth-child(3)').classList.add('active');renderSearchInit();}
-  if(name==='usuarios'){document.querySelector('.nav-link:nth-child(4)').classList.add('active');renderUsuarios();}
-  if(name==='arco'){document.querySelector('.nav-link:nth-child(5)').classList.add('active');}
-}
-
-function toggleRole() {
-  currentRole = currentRole==='Supervisor'?'Operador':'Supervisor';
-  document.getElementById('role-badge').textContent = currentRole.toUpperCase();
-  document.getElementById('user-avatar').textContent = currentRole==='Supervisor'?'JS':'MG';
-}
-
 let currentPage = 1;
 const PAGE_SIZE = 20;
 
-function renderListado() {
-  const tbody=document.getElementById('envios-tbody');
-  const empty=document.getElementById('empty-listado');
-  tbody.innerHTML='';
-  document.getElementById('total-count').textContent=envios.length;
-  document.getElementById('transito-count').textContent=envios.filter(e=>e.estado==='En Tránsito').length;
-  document.getElementById('entregado-count').textContent=envios.filter(e=>e.estado==='Entregado').length;
-  document.getElementById('preparacion-count').textContent=envios.filter(e=>e.estado==='En Preparación').length;
-  if(envios.length===0){empty.style.display='block';document.getElementById('pagination-controls').innerHTML='';return;}
-  empty.style.display='none';
-  const sorted=[...envios].reverse();
-  const totalPages=Math.ceil(sorted.length/PAGE_SIZE);
-  if(currentPage>totalPages)currentPage=totalPages;
-  const start=(currentPage-1)*PAGE_SIZE;
-  const pageItems=sorted.slice(start,start+PAGE_SIZE);
-  pageItems.forEach(e=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="tracking-id">${e.id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td><td class="td-muted">${e.fecha}</td>`;
-    tr.title='Ver detalle';
-    tr.onclick=()=>{fromSearch=false;verDetalle(e.id);};
-    tbody.appendChild(tr);
+// ── Helpers HTTP ──────────────────────────────────────────────────────────────
+async function api(path, options = {}) {
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options,
   });
-  // Pagination controls
-  let pagHtml=`<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;font-size:13px;color:var(--text-muted)">`;
-  pagHtml+=`<span>Mostrando ${start+1}–${Math.min(start+PAGE_SIZE,sorted.length)} de ${sorted.length} envíos</span>`;
-  pagHtml+=`<div style="display:flex;gap:6px">`;
-  if(currentPage>1) pagHtml+=`<button class="btn btn-ghost btn-sm" onclick="currentPage=1;renderListado()">«</button><button class="btn btn-ghost btn-sm" onclick="currentPage--;renderListado()">‹</button>`;
-  pagHtml+=`<span style="padding:6px 12px;font-family:var(--mono)">${currentPage}/${totalPages}</span>`;
-  if(currentPage<totalPages) pagHtml+=`<button class="btn btn-ghost btn-sm" onclick="currentPage++;renderListado()">›</button><button class="btn btn-ghost btn-sm" onclick="currentPage=${totalPages};renderListado()">»</button>`;
-  pagHtml+=`</div></div>`;
-  document.getElementById('pagination-controls').innerHTML=pagHtml;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Error desconocido' }));
+    throw new Error(err.detail || 'Error en la API');
+  }
+  return res.json();
 }
 
+// ── Formato fecha ─────────────────────────────────────────────────────────────
+function fmtFecha(iso) {
+  if (!iso) return '';
+  return iso.slice(0, 16).replace('T', ' ');
+}
+
+// ── Badge ─────────────────────────────────────────────────────────────────────
+function badgeClass(e) {
+  if (e === 'Creado') return 'badge-creado';
+  if (e === 'En Preparación') return 'badge-preparacion';
+  if (e === 'En Tránsito') return 'badge-transito';
+  if (e === 'Entregado') return 'badge-entregado';
+  return '';
+}
+function slug(e) {
+  if (e === 'Creado') return 'creado';
+  if (e === 'En Preparación') return 'preparacion';
+  if (e === 'En Tránsito') return 'transito';
+  if (e === 'Entregado') return 'entregado';
+  return '';
+}
+
+// ── Screens ───────────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const screen = document.getElementById('screen-' + name);
+  if (screen) screen.classList.add('active');
+  const navMap = { listado: 0, alta: 1, busqueda: 2, usuarios: 3, arco: 4 };
+  const navLinks = document.querySelectorAll('.nav-link');
+  if (navMap[name] !== undefined && navLinks[navMap[name]]) navLinks[navMap[name]].classList.add('active');
+  if (name === 'listado') { currentPage = 1; renderListado(); }
+  if (name === 'alta') resetForm();
+  if (name === 'busqueda') renderSearchInit();
+  if (name === 'usuarios') renderUsuarios();
+  if (name === 'bulk') actualizarBulkStats();
+}
+
+// ── Listado ───────────────────────────────────────────────────────────────────
+async function renderListado() {
+  const tbody = document.getElementById('envios-tbody');
+  const empty = document.getElementById('empty-listado');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Cargando...</td></tr>';
+  try {
+    const [data, metricas] = await Promise.all([
+      api(`/api/envios?page=${currentPage}&page_size=${PAGE_SIZE}`),
+      api('/api/envios/metricas'),
+    ]);
+    document.getElementById('total-count').textContent = metricas.total;
+    document.getElementById('transito-count').textContent = metricas.en_transito;
+    document.getElementById('entregado-count').textContent = metricas.entregado;
+    document.getElementById('preparacion-count').textContent = metricas.en_preparacion;
+    tbody.innerHTML = '';
+    if (data.items.length === 0) { empty.style.display = 'block'; document.getElementById('pagination-controls').innerHTML = ''; return; }
+    empty.style.display = 'none';
+    data.items.forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><span class="tracking-id">${e.tracking_id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino_provincia}, ${e.destino_ciudad}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td><td class="td-muted">${fmtFecha(e.fecha_creacion)}</td>`;
+      tr.onclick = () => { fromSearch = false; verDetalle(e.tracking_id); };
+      tbody.appendChild(tr);
+    });
+    const total = data.total, totalPages = data.total_pages;
+    let pagHtml = `<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;font-size:13px;color:var(--text-muted)">`;
+    pagHtml += `<span>Mostrando ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, total)} de ${total} envíos</span>`;
+    pagHtml += `<div style="display:flex;gap:6px">`;
+    if (currentPage > 1) pagHtml += `<button class="btn btn-ghost btn-sm" onclick="currentPage=1;renderListado()">«</button><button class="btn btn-ghost btn-sm" onclick="currentPage--;renderListado()">‹</button>`;
+    pagHtml += `<span style="padding:6px 12px;font-family:var(--mono)">${currentPage}/${totalPages}</span>`;
+    if (currentPage < totalPages) pagHtml += `<button class="btn btn-ghost btn-sm" onclick="currentPage++;renderListado()">›</button><button class="btn btn-ghost btn-sm" onclick="currentPage=${totalPages};renderListado()">»</button>`;
+    pagHtml += `</div></div>`;
+    document.getElementById('pagination-controls').innerHTML = pagHtml;
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--danger)">Error al cargar envíos: ${err.message}</td></tr>`;
+  }
+}
+
+// ── Alta ──────────────────────────────────────────────────────────────────────
 function resetForm() {
-  ['f-remitente','f-destinatario','f-peso','f-obs','f-origen-ciudad','f-origen-calle','f-destino-ciudad','f-destino-calle','f-tel-destinatario'].forEach(id=>{document.getElementById(id).value='';document.getElementById(id).classList.remove('error');});
-  document.getElementById('f-origen').selectedIndex=0;document.getElementById('f-origen').classList.remove('error');
-  document.getElementById('f-destino').selectedIndex=0;document.getElementById('f-destino').classList.remove('error');
-  document.getElementById('f-tipo').selectedIndex=0;
-  document.getElementById('form-error').style.display='none';
-  document.getElementById('tracking-preview').textContent='LT-2026-'+String(nextNum).padStart(4,'0');
+  ['f-remitente','f-destinatario','f-peso','f-obs','f-origen-ciudad','f-origen-calle','f-destino-ciudad','f-destino-calle','f-tel-destinatario'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.value = ''; el.classList.remove('error'); }
+  });
+  ['f-origen','f-destino'].forEach(id => { const el = document.getElementById(id); if (el) { el.selectedIndex = 0; el.classList.remove('error'); } });
+  const fi = document.getElementById('f-tipo'); if (fi) fi.selectedIndex = 0;
+  const fe = document.getElementById('form-error'); if (fe) fe.style.display = 'none';
+  document.getElementById('tracking-preview').textContent = 'LT-????-????';
 }
 
-function crearEnvio() {
-  const rem=document.getElementById('f-remitente').value.trim();
-  const dest=document.getElementById('f-destinatario').value.trim();
-  const orig=document.getElementById('f-origen').value;
-  const origCiudad=document.getElementById('f-origen-ciudad').value.trim();
-  const origCalle=document.getElementById('f-origen-calle').value.trim();
-  const dst=document.getElementById('f-destino').value;
-  const dstCiudad=document.getElementById('f-destino-ciudad').value.trim();
-  const dstCalle=document.getElementById('f-destino-calle').value.trim();
-  const telDest=document.getElementById('f-tel-destinatario').value.trim();
-  // Clear previous errors
-  ['f-remitente','f-destinatario','f-origen','f-origen-ciudad','f-origen-calle','f-destino','f-destino-ciudad','f-destino-calle'].forEach(id=>document.getElementById(id).classList.remove('error'));
-  let hasError=false;
-  if(!rem){document.getElementById('f-remitente').classList.add('error');hasError=true;}
-  if(!dest){document.getElementById('f-destinatario').classList.add('error');hasError=true;}
-  if(!orig){document.getElementById('f-origen').classList.add('error');hasError=true;}
-  if(!origCiudad){document.getElementById('f-origen-ciudad').classList.add('error');hasError=true;}
-  if(!origCalle){document.getElementById('f-origen-calle').classList.add('error');hasError=true;}
-  if(!dst){document.getElementById('f-destino').classList.add('error');hasError=true;}
-  if(!dstCiudad){document.getElementById('f-destino-ciudad').classList.add('error');hasError=true;}
-  if(!dstCalle){document.getElementById('f-destino-calle').classList.add('error');hasError=true;}
-  if(hasError){document.getElementById('form-error').style.display='block';return;}
-  document.getElementById('form-error').style.display='none';
-  const id='LT-2026-'+String(nextNum).padStart(4,'0');
-  nextNum++;
-  const now=new Date();
-  const ts=now.toISOString().slice(0,10)+' '+now.toTimeString().slice(0,5);
-  const user=loggedUser?loggedUser.username:'op.desconocido';
-  const origenFull=orig+', '+origCiudad+', '+origCalle;
-  const destinoFull=dst+', '+dstCiudad+', '+dstCalle;
-  envios.push({id,remitente:rem,destinatario:dest,origen:origenFull,destino:destinoFull,telDestinatario:telDest,tipo:document.getElementById('f-tipo').value,peso:document.getElementById('f-peso').value||'0',obs:document.getElementById('f-obs').value,estado:'Creado',fecha:now.toISOString().slice(0,10),historial:[{estado:'Creado',ts,usuario:user}]});
-  lastCreated=id;
-  document.getElementById('modal-tracking-id').textContent=id;
-  document.getElementById('success-modal').classList.add('show');
+async function crearEnvio() {
+  const get = id => document.getElementById(id)?.value?.trim() || '';
+  const rem = get('f-remitente'), dest = get('f-destinatario');
+  const orig = document.getElementById('f-origen')?.value;
+  const origCiudad = get('f-origen-ciudad'), origCalle = get('f-origen-calle');
+  const dst = document.getElementById('f-destino')?.value;
+  const dstCiudad = get('f-destino-ciudad'), dstCalle = get('f-destino-calle');
+  // Validate
+  let hasError = false;
+  [['f-remitente', rem],['f-destinatario', dest],['f-origen-ciudad', origCiudad],['f-origen-calle', origCalle],['f-destino-ciudad', dstCiudad],['f-destino-calle', dstCalle]].forEach(([id, val]) => {
+    const el = document.getElementById(id); if (!val) { el?.classList.add('error'); hasError = true; } else el?.classList.remove('error');
+  });
+  [['f-origen', orig],['f-destino', dst]].forEach(([id, val]) => {
+    const el = document.getElementById(id); if (!val) { el?.classList.add('error'); hasError = true; } else el?.classList.remove('error');
+  });
+  if (hasError) { document.getElementById('form-error').style.display = 'block'; return; }
+  document.getElementById('form-error').style.display = 'none';
+  try {
+    const envio = await api(`/api/envios?usuario=${loggedUser?.username || 'sistema'}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        remitente: rem, destinatario: dest,
+        origen_provincia: orig, origen_ciudad: origCiudad, origen_direccion: origCalle,
+        destino_provincia: dst, destino_ciudad: dstCiudad, destino_direccion: dstCalle,
+        tel_destinatario: get('f-tel-destinatario'),
+        tipo_paquete: document.getElementById('f-tipo')?.value,
+        peso_kg: parseFloat(get('f-peso')) || null,
+        observaciones: get('f-obs'),
+      }),
+    });
+    lastCreated = envio.tracking_id;
+    document.getElementById('modal-tracking-id').textContent = envio.tracking_id;
+    document.getElementById('success-modal').classList.add('show');
+  } catch (err) {
+    alert('Error al crear envío: ' + err.message);
+  }
 }
 
-function closeModal(){document.getElementById('success-modal').classList.remove('show');}
+function closeModal() { document.getElementById('success-modal').classList.remove('show'); }
 
+// ── Búsqueda ──────────────────────────────────────────────────────────────────
 function renderSearchInit() {
-  document.getElementById('search-input').value='';
-  document.getElementById('filter-estado').value='';
-  buscar();
+  document.getElementById('search-input').value = '';
+  document.getElementById('filter-estado').value = '';
+  document.getElementById('search-tbody').innerHTML = '';
+  document.getElementById('empty-busqueda').style.display = 'block';
+  document.getElementById('empty-busqueda').innerHTML = '<div class="empty-icon">🔍</div><div>Ingresá un término o seleccioná un estado para buscar</div>';
+  document.getElementById('search-results-count').textContent = '';
 }
 
-function buscar() {
-  const q=document.getElementById('search-input').value.trim().toLowerCase();
-  const estado=document.getElementById('filter-estado').value;
-  const tbody=document.getElementById('search-tbody');
-  const empty=document.getElementById('empty-busqueda');
-  const count=document.getElementById('search-results-count');
-  tbody.innerHTML='';
-  if(!q&&!estado){
-    empty.style.display='block';
-    empty.innerHTML='<div class="empty-icon">🔍</div><div>Ingresá un término o seleccioná un estado para buscar</div>';
-    count.textContent='';
-    return;
-  }
-  if(!q&&estado){
-    const all=envios.filter(e=>e.estado===estado);
-    count.textContent=`${all.length} resultado${all.length!==1?'s':''} encontrado${all.length!==1?'s':''}`;
-    if(all.length===0){empty.style.display='block';empty.innerHTML='<div class="empty-icon">😞</div><div>No se encontraron envíos con ese estado</div>';return;}
-    empty.style.display='none';
-    all.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td><span class="tracking-id">${e.id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.origen}</td><td class="td-muted">${e.destino}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td>`;tr.title='Ver detalle';tr.onclick=()=>{fromSearch=true;verDetalle(e.id);};tbody.appendChild(tr);});return;
-  }
-  const results=envios.filter(e=>{
-    const mq=!q||e.id.toLowerCase().includes(q)||e.destinatario.toLowerCase().includes(q)||e.remitente.toLowerCase().includes(q);
-    const me=!estado||e.estado===estado;
-    return mq&&me;
-  });
-  count.textContent=`${results.length} resultado${results.length!==1?'s':''} encontrado${results.length!==1?'s':''}`;
-  if(results.length===0){empty.style.display='block';empty.innerHTML='<div class="empty-icon">😞</div><div>No se encontraron envíos con esos criterios</div>';return;}
-  empty.style.display='none';
-  results.forEach(e=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="tracking-id">${e.id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.origen}</td><td class="td-muted">${e.destino}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td>`;
-    tr.title='Ver detalle';
-    tr.onclick=()=>{fromSearch=true;verDetalle(e.id);};
-    tbody.appendChild(tr);
-  });
+let searchTimeout = null;
+async function buscar() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(async () => {
+    const q = document.getElementById('search-input').value.trim();
+    const estado = document.getElementById('filter-estado').value;
+    const tbody = document.getElementById('search-tbody');
+    const empty = document.getElementById('empty-busqueda');
+    const count = document.getElementById('search-results-count');
+    if (!q && !estado) { renderSearchInit(); return; }
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Buscando...</td></tr>';
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (estado) params.set('estado', estado);
+      const results = await api(`/api/envios/search?${params}`);
+      tbody.innerHTML = '';
+      count.textContent = `${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}`;
+      if (results.length === 0) { empty.style.display = 'block'; empty.innerHTML = '<div class="empty-icon">😞</div><div>No se encontraron envíos con esos criterios</div>'; return; }
+      empty.style.display = 'none';
+      results.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><span class="tracking-id">${e.tracking_id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino_provincia}</td><td class="td-muted">${e.destino_ciudad}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td>`;
+        tr.onclick = () => { fromSearch = true; verDetalle(e.tracking_id); };
+        tbody.appendChild(tr);
+      });
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger)">Error: ${err.message}</td></tr>`;
+    }
+  }, 300);
 }
 
-function clearSearch(){document.getElementById('search-input').value='';document.getElementById('filter-estado').value='';buscar();}
+function clearSearch() { renderSearchInit(); }
 
-function verDetalle(id) {
-  const e=envios.find(x=>x.id===id);
-  if(!e)return;
-  const backBtn=document.getElementById('back-from-detail');
-  backBtn.textContent='← Volver a '+(fromSearch?'Búsqueda':'Dashboard');
-  backBtn.onclick=()=>showScreen(fromSearch?'busqueda':'listado');
-
-  const estados=['Creado','En Preparación','En Tránsito','Entregado'];
-  const ci=estados.indexOf(e.estado);
-  const isSup=currentRole==='Supervisor';
-
-  let tlHtml=e.historial.map((h,i)=>`<div class="timeline-item"><div class="timeline-dot ${i<e.historial.length-1?'dot-done':'dot-current'}"></div><div class="timeline-content"><div class="timeline-state">${h.estado}</div><div class="timeline-meta">${h.ts} · ${h.usuario}</div>${h.obs?`<div class="timeline-meta" style="color:var(--text-muted);font-style:italic;margin-top:3px">💬 ${h.obs}</div>`:''}</div></div>`).join('');
-  tlHtml+=estados.slice(ci+1).map(p=>`<div class="timeline-item"><div class="timeline-dot dot-pending"></div><div class="timeline-content"><div class="timeline-state" style="color:var(--text-dim)">${p}</div><div class="timeline-meta">Pendiente</div></div></div>`).join('');
-
-  const next=ci<3?estados[ci+1]:null;
-  let actionBlock='';
-  if(isSup&&next){
-    const flowNodes=estados.map((s,i)=>`<div class="state-node sn-${slug(s)} ${i===ci?'sn-active':''}">${s}</div>${i<3?'<span class="state-arrow">→</span>':''}`).join('');
-    actionBlock=`<div class="card mt-16"><div class="card-title">Cambiar Estado</div><div class="role-notice">🔐 Acción de Supervisor — se registrará fecha/hora y usuario automáticamente.</div><div class="state-flow">${flowNodes}</div><button class="btn btn-primary" onclick="cambiarEstado('${e.id}','${next}')">Avanzar a "${next}" →</button></div>`;
-  } else if(e.estado==='Entregado'){
-    actionBlock=`<div class="card mt-16" style="border-color:rgba(64,240,160,0.3)"><div style="display:flex;align-items:center;gap:10px;color:var(--success)"><span style="font-size:20px">✓</span><span style="font-weight:600">Envío completado — estado final</span></div></div>`;
-  } else if(!isSup&&next){
-    actionBlock=`<div class="card mt-16"><div class="role-notice" style="background:rgba(240,224,64,0.06);border-color:rgba(240,224,64,0.2);color:var(--accent)">⚠ El cambio de estado requiere rol Supervisor. Tu rol actual es Operador.</div></div>`;
-  }
-
-  document.getElementById('detalle-content').innerHTML=`
-    <div class="detail-header">
-      <div><div style="font-size:12px;color:var(--text-dim);font-family:var(--mono);margin-bottom:6px">TRACKING ID</div><div class="detail-tracking">${e.id}</div></div>
-      <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
-      <div>
-        <div class="card">
-          <div class="card-title">Datos del Envío</div>
-          <div class="detail-grid">
-            <div class="detail-field"><div class="detail-label">Remitente</div><div class="detail-value">${e.remitente}</div></div>
-            <div class="detail-field"><div class="detail-label">Destinatario</div><div class="detail-value">${e.destinatario}</div></div>
-            <div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Dirección de Origen</div><div class="detail-value">${e.origen}</div></div>
-            <div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Dirección de Destino</div><div class="detail-value">${e.destino}</div></div>
-            ${e.telDestinatario?`<div class="detail-field"><div class="detail-label">Teléfono Destinatario</div><div class="detail-value">${e.telDestinatario}</div></div>`:''}
-            <div class="detail-field"><div class="detail-label">Tipo</div><div class="detail-value">${e.tipo}</div></div>
-            <div class="detail-field"><div class="detail-label">Peso</div><div class="detail-value">${e.peso} kg</div></div>
-            ${e.obs?`<div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Observaciones</div><div class="detail-value">${e.obs}</div></div>`:''}
-          </div>
-        </div>
-        ${actionBlock}
-      </div>
-      <div class="card"><div class="card-title">Historial de Estados</div><div class="timeline">${tlHtml}</div></div>
-    </div>`;
+// ── Detalle ───────────────────────────────────────────────────────────────────
+async function verDetalle(tracking_id) {
   showScreen('detalle');
+  document.getElementById('detalle-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>';
+  const backBtn = document.getElementById('back-from-detail');
+  backBtn.textContent = '← Volver a ' + (fromSearch ? 'Búsqueda' : 'Dashboard');
+  backBtn.onclick = () => showScreen(fromSearch ? 'busqueda' : 'listado');
+  try {
+    const e = await api(`/api/envios/${tracking_id}`);
+    const ESTADOS = ['Creado', 'En Preparación', 'En Tránsito', 'Entregado'];
+    const ci = ESTADOS.indexOf(e.estado);
+    const isSup = currentRole === 'Supervisor';
+    const next = ci < 3 ? ESTADOS[ci + 1] : null;
+    let tlHtml = (e.historial || []).map((h, i) => `
+      <div class="timeline-item">
+        <div class="timeline-dot ${i < e.historial.length - 1 ? 'dot-done' : 'dot-current'}"></div>
+        <div class="timeline-content">
+          <div class="timeline-state">${h.estado_nuevo}</div>
+          <div class="timeline-meta">${fmtFecha(h.timestamp)} · ${h.usuario || '—'}</div>
+          ${h.observaciones ? `<div class="timeline-meta" style="color:var(--text-muted);font-style:italic;margin-top:3px">💬 ${h.observaciones}</div>` : ''}
+        </div>
+      </div>`).join('');
+    tlHtml += ESTADOS.slice(ci + 1).map(p => `
+      <div class="timeline-item">
+        <div class="timeline-dot dot-pending"></div>
+        <div class="timeline-content">
+          <div class="timeline-state" style="color:var(--text-dim)">${p}</div>
+          <div class="timeline-meta">Pendiente</div>
+        </div>
+      </div>`).join('');
+    let actionBlock = '';
+    if (isSup && next) {
+      const flowNodes = ESTADOS.map((s, i) => `<div class="state-node sn-${slug(s)} ${i === ci ? 'sn-active' : ''}">${s}</div>${i < 3 ? '<span class="state-arrow">→</span>' : ''}`).join('');
+      actionBlock = `<div class="card mt-16"><div class="card-title">Cambiar Estado</div><div class="role-notice">🔐 Acción de Supervisor — se registrará fecha/hora y usuario automáticamente.</div><div class="state-flow">${flowNodes}</div><button class="btn btn-primary" onclick="cambiarEstado('${e.tracking_id}','${next}')">Avanzar a "${next}" →</button></div>`;
+    } else if (e.estado === 'Entregado') {
+      actionBlock = `<div class="card mt-16" style="border-color:rgba(64,240,160,0.3)"><div style="display:flex;align-items:center;gap:10px;color:var(--success)"><span style="font-size:20px">✓</span><span style="font-weight:600">Envío completado — estado final</span></div></div>`;
+    } else if (!isSup && next) {
+      actionBlock = `<div class="card mt-16"><div class="role-notice" style="background:rgba(240,224,64,0.06);border-color:rgba(240,224,64,0.2);color:var(--accent)">⚠ El cambio de estado requiere rol Supervisor. Tu rol actual es Operador.</div></div>`;
+    }
+    const origen = `${e.origen_provincia}, ${e.origen_ciudad}, ${e.origen_direccion}`;
+    const destino = `${e.destino_provincia}, ${e.destino_ciudad}, ${e.destino_direccion}`;
+    document.getElementById('detalle-content').innerHTML = `
+      <div class="detail-header">
+        <div><div style="font-size:12px;color:var(--text-dim);font-family:var(--mono);margin-bottom:6px">TRACKING ID</div><div class="detail-tracking">${e.tracking_id}</div></div>
+        <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+        <div>
+          <div class="card">
+            <div class="card-title">Datos del Envío</div>
+            <div class="detail-grid">
+              <div class="detail-field"><div class="detail-label">Remitente</div><div class="detail-value">${e.remitente}</div></div>
+              <div class="detail-field"><div class="detail-label">Destinatario</div><div class="detail-value">${e.destinatario}</div></div>
+              <div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Dirección de Origen</div><div class="detail-value">${origen}</div></div>
+              <div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Dirección de Destino</div><div class="detail-value">${destino}</div></div>
+              ${e.tel_destinatario ? `<div class="detail-field"><div class="detail-label">Teléfono Destinatario</div><div class="detail-value">${e.tel_destinatario}</div></div>` : ''}
+              <div class="detail-field"><div class="detail-label">Tipo</div><div class="detail-value">${e.tipo_paquete}</div></div>
+              <div class="detail-field"><div class="detail-label">Peso</div><div class="detail-value">${e.peso_kg ?? '—'} kg</div></div>
+              ${e.observaciones ? `<div class="detail-field" style="grid-column:1/-1"><div class="detail-label">Observaciones</div><div class="detail-value">${e.observaciones}</div></div>` : ''}
+            </div>
+          </div>
+          ${actionBlock}
+        </div>
+        <div class="card"><div class="card-title">Historial de Estados</div><div class="timeline">${tlHtml}</div></div>
+      </div>`;
+  } catch (err) {
+    document.getElementById('detalle-content').innerHTML = `<div style="color:var(--danger)">Error: ${err.message}</div>`;
+  }
 }
 
-let pendingEstado={id:null,nuevo:null};
+// ── Cambio de estado ──────────────────────────────────────────────────────────
+let pendingEstado = { id: null, nuevo: null };
 
-function cambiarEstado(id,nuevoEstado) {
-  const e=envios.find(x=>x.id===id);
-  if(!e)return;
-  pendingEstado={id,nuevo:nuevoEstado};
-  document.getElementById('obs-estado-input').value='';
-  const badge=(s)=>`<span class="badge ${badgeClass(s)}">${s.toUpperCase()}</span>`;
-  document.getElementById('obs-state-transition').innerHTML=badge(e.estado)+'<span class="arrow">→</span>'+badge(nuevoEstado);
+function cambiarEstado(id, nuevoEstado) {
+  pendingEstado = { id, nuevo: nuevoEstado };
+  document.getElementById('obs-estado-input').value = '';
+  const badge = s => `<span class="badge ${badgeClass(s)}">${s.toUpperCase()}</span>`;
+  document.getElementById('obs-state-transition').innerHTML = '';
+  // We need current state — fetch from last known
+  document.getElementById('obs-state-transition').innerHTML = badge('...') + '<span class="arrow">→</span>' + badge(nuevoEstado);
   document.getElementById('obs-modal').classList.add('show');
 }
 
 function closeObsModal() {
   document.getElementById('obs-modal').classList.remove('show');
-  pendingEstado={id:null,nuevo:null};
+  pendingEstado = { id: null, nuevo: null };
 }
 
-function confirmarCambioEstado() {
-  const {id,nuevo}=pendingEstado;
-  if(!id)return;
-  const e=envios.find(x=>x.id===id);
-  if(!e)return;
-  const now=new Date();
-  const ts=now.toISOString().slice(0,10)+' '+now.toTimeString().slice(0,5);
-  const obsVal=document.getElementById('obs-estado-input').value.trim();
-  const usuario=loggedUser?loggedUser.username:'op.desconocido';
-  e.estado=nuevo;
-  e.historial.push({estado:nuevo,ts,usuario,obs:obsVal});
-  document.getElementById('obs-modal').classList.remove('show');
-  verDetalle(id);
-}
-
-function badgeClass(e){
-  if(e==='Creado')return'badge-creado';
-  if(e==='En Preparación')return'badge-preparacion';
-  if(e==='En Tránsito')return'badge-transito';
-  if(e==='Entregado')return'badge-entregado';
-  return'';
-}
-
-function slug(e){
-  if(e==='Creado')return'creado';
-  if(e==='En Preparación')return'preparacion';
-  if(e==='En Tránsito')return'transito';
-  if(e==='Entregado')return'entregado';
-  return'';
-}
-
-
-// ── Usuarios mock ────────────────────────────────────────────────────────────
-let usuarios = [
-  { id:1, username:'sup.montero', nombre:'Juan Sup. Montero', rol:'Supervisor', activo:true },
-  { id:2, username:'op.gonzalez', nombre:'María González', rol:'Operador', activo:true },
-  { id:3, username:'op.ramirez', nombre:'Carlos Ramírez', rol:'Operador', activo:true },
-  { id:4, username:'op.garcia', nombre:'Laura García', rol:'Operador', activo:false },
-];
-let nextUserId = 5;
-
-function showNuevoUsuarioForm() {
-  if(currentRole !== 'Administrador') return;
-  ['nu-nombre','nu-username'].forEach(id=>{document.getElementById(id).value='';});
-  document.getElementById('nu-rol').selectedIndex=0;
-  document.getElementById('nu-activo').selectedIndex=0;
-  document.getElementById('nu-error').style.display='none';
-  document.getElementById('nuevo-usuario-form').style.display='block';
-}
-
-function crearUsuario() {
-  const nombre = document.getElementById('nu-nombre').value.trim();
-  const username = document.getElementById('nu-username').value.trim();
-  const rol = document.getElementById('nu-rol').value;
-  if(!nombre||!username||!rol){document.getElementById('nu-error').style.display='block';return;}
-  document.getElementById('nu-error').style.display='none';
-  const activo = document.getElementById('nu-activo').value === 'true';
-  usuarios.push({id:nextUserId++, username, nombre, rol, activo});
-  document.getElementById('nuevo-usuario-form').style.display='none';
-  renderUsuarios();
-}
-
-function toggleUsuarioActivo(id) {
-  const u = usuarios.find(x=>x.id===id);
-  if(!u) return;
-  if(loggedUser && u.username === loggedUser.username) {
-    alert('No podés desactivar tu propia cuenta.');
-    renderUsuarios(); // re-render to reset toggle visually
-    return;
+async function confirmarCambioEstado() {
+  const { id, nuevo } = pendingEstado;
+  if (!id) return;
+  const obs = document.getElementById('obs-estado-input').value.trim();
+  try {
+    await api(`/api/envios/${id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ nuevo_estado: nuevo, usuario: loggedUser?.username || 'sistema', observaciones: obs }),
+    });
+    document.getElementById('obs-modal').classList.remove('show');
+    verDetalle(id);
+  } catch (err) {
+    alert('Error al cambiar estado: ' + err.message);
   }
-  u.activo = !u.activo;
-  renderUsuarios();
 }
 
-function renderUsuarios() {
+// ── Usuarios ──────────────────────────────────────────────────────────────────
+async function renderUsuarios() {
   const isAdmin = currentRole === 'Administrador';
   document.getElementById('admin-only-notice').style.display = isAdmin ? 'none' : 'flex';
   document.getElementById('btn-nuevo-usuario').style.display = isAdmin ? '' : 'none';
   document.getElementById('nuevo-usuario-form').style.display = 'none';
   const list = document.getElementById('usuarios-list');
-  list.innerHTML = '';
-  usuarios.forEach(u => {
-    const initials = u.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const rolColor = u.rol==='Supervisor' ? 'accent2' : 'text-muted';
-    const div = document.createElement('div');
-    div.className = 'user-row';
-    div.innerHTML = `
-      <div class="user-info">
-        <div class="user-avatar-lg" style="border-color:${u.activo?'var(--success)':'var(--border)'}">${initials}</div>
-        <div>
-          <div class="user-name">${u.nombre}</div>
-          <div class="user-meta">${u.username} · <span style="color:var(--${rolColor})">${u.rol}</span></div>
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Cargando...</div>';
+  try {
+    const usuarios = await api('/api/usuarios');
+    list.innerHTML = '';
+    usuarios.forEach(u => {
+      const initials = u.nombre.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const rolColor = u.rol === 'Supervisor' ? 'accent2' : 'text-muted';
+      const div = document.createElement('div');
+      div.className = 'user-row';
+      div.innerHTML = `
+        <div class="user-info">
+          <div class="user-avatar-lg" style="border-color:${u.activo ? 'var(--success)' : 'var(--border)'}">${initials}</div>
+          <div>
+            <div class="user-name">${u.nombre}</div>
+            <div class="user-meta">${u.username} · <span style="color:var(--${rolColor})">${u.rol}</span></div>
+          </div>
         </div>
-      </div>
-      <div class="user-actions">
-        <span style="font-size:12px;color:var(--text-muted);margin-right:8px">${u.activo?'<span style="color:var(--success)">● Activo</span>':'<span style="color:var(--text-dim)">○ Inactivo</span>'}</span>
-        ${isAdmin ? `<label class="toggle-switch" title="${u.activo?'Desactivar':'Activar'} usuario"><input type="checkbox" ${u.activo?'checked':''} onchange="toggleUsuarioActivo(${u.id})"><span class="toggle-slider"></span></label>` : ''}
-      </div>`;
-    list.appendChild(div);
-  });
+        <div class="user-actions">
+          <span style="font-size:12px;color:var(--text-muted);margin-right:8px">${u.activo ? '<span style="color:var(--success)">● Activo</span>' : '<span style="color:var(--text-dim)">○ Inactivo</span>'}</span>
+          ${isAdmin ? `<label class="toggle-switch" title="${u.activo ? 'Desactivar' : 'Activar'} usuario"><input type="checkbox" ${u.activo ? 'checked' : ''} onchange="toggleUsuarioActivo('${u.username}', this.checked)"><span class="toggle-slider"></span></label>` : ''}
+        </div>`;
+      list.appendChild(div);
+    });
+  } catch (err) {
+    list.innerHTML = `<div style="padding:20px;color:var(--danger)">Error: ${err.message}</div>`;
+  }
 }
 
-// ── ARCO ─────────────────────────────────────────────────────────────────────
-let arcoSolicitudes = [];
+function showNuevoUsuarioForm() {
+  if (currentRole !== 'Administrador') return;
+  ['nu-nombre','nu-username'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('nu-rol').selectedIndex = 0;
+  document.getElementById('nu-activo').selectedIndex = 0;
+  document.getElementById('nu-error').style.display = 'none';
+  document.getElementById('nuevo-usuario-form').style.display = 'block';
+}
 
-function enviarARCO() {
+async function crearUsuario() {
+  const nombre = document.getElementById('nu-nombre').value.trim();
+  const username = document.getElementById('nu-username').value.trim();
+  const rol = document.getElementById('nu-rol').value;
+  if (!nombre || !username || !rol) { document.getElementById('nu-error').style.display = 'block'; return; }
+  document.getElementById('nu-error').style.display = 'none';
+  const activo = document.getElementById('nu-activo').value === 'true';
+  try {
+    await api('/api/usuarios', { method: 'POST', body: JSON.stringify({ username, nombre, rol, activo }) });
+    document.getElementById('nuevo-usuario-form').style.display = 'none';
+    renderUsuarios();
+  } catch (err) {
+    document.getElementById('nu-error').textContent = '⚠ ' + err.message;
+    document.getElementById('nu-error').style.display = 'block';
+  }
+}
+
+async function toggleUsuarioActivo(username, activo) {
+  if (loggedUser && username === loggedUser.username) {
+    alert('No podés desactivar tu propia cuenta.');
+    renderUsuarios(); return;
+  }
+  try {
+    await api(`/api/usuarios/${username}/activo`, { method: 'PATCH', body: JSON.stringify({ activo }) });
+  } catch (err) {
+    alert('Error: ' + err.message);
+    renderUsuarios();
+  }
+}
+
+// ── ARCO ──────────────────────────────────────────────────────────────────────
+async function enviarARCO() {
   const nombre = document.getElementById('arco-nombre').value.trim();
   const email = document.getElementById('arco-email').value.trim();
   const tipo = document.getElementById('arco-tipo').value;
   const desc = document.getElementById('arco-desc').value.trim();
-  document.getElementById('arco-error').style.display='none';
-  document.getElementById('arco-success').style.display='none';
-  if(!nombre||!email||!tipo||!desc){document.getElementById('arco-error').style.display='block';return;}
-  const tracking = document.getElementById('arco-tracking').value.trim();
-  arcoSolicitudes.push({nombre,email,tipo,tracking,desc,fecha:new Date().toISOString().slice(0,10)});
-  document.getElementById('arco-nombre').value='';
-  document.getElementById('arco-email').value='';
-  document.getElementById('arco-tipo').selectedIndex=0;
-  document.getElementById('arco-tracking').value='';
-  document.getElementById('arco-desc').value='';
-  document.getElementById('arco-success').style.display='block';
+  document.getElementById('arco-error').style.display = 'none';
+  document.getElementById('arco-success').style.display = 'none';
+  if (!nombre || !email || !tipo || !desc) { document.getElementById('arco-error').style.display = 'block'; return; }
+  try {
+    await api('/api/arco', { method: 'POST', body: JSON.stringify({ nombre, email, tipo, tracking_relacionado: document.getElementById('arco-tracking').value.trim() || null, descripcion: desc }) });
+    ['arco-nombre','arco-email','arco-tracking','arco-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('arco-tipo').selectedIndex = 0;
+    document.getElementById('arco-success').style.display = 'block';
+  } catch (err) {
+    document.getElementById('arco-error').textContent = '⚠ Error al enviar: ' + err.message;
+    document.getElementById('arco-error').style.display = 'block';
+  }
 }
 
-
-// ── Auth mock ─────────────────────────────────────────────────────────────────
-const credenciales = {
-  'op.gonzalez':  { pass: 'op1234',  nombre: 'María González',    rol: 'Operador',       initials: 'MG' },
-  'op.ramirez':   { pass: 'op1234',  nombre: 'Carlos Ramírez',    rol: 'Operador',       initials: 'CR' },
-  'sup.montero':  { pass: 'sup1234', nombre: 'Juan Montero',      rol: 'Supervisor',     initials: 'JM' },
-  'adm.sistema':  { pass: 'adm1234', nombre: 'Admin Sistema',     rol: 'Administrador',  initials: 'AS' },
-};
-let loggedUser = null;
-
+// ── Auth ──────────────────────────────────────────────────────────────────────
 function fillLogin(user, pass) {
   document.getElementById('login-username').value = user;
   document.getElementById('login-password').value = pass;
   document.getElementById('login-error').classList.remove('show');
 }
 
-function doLogin() {
-  const user = document.getElementById('login-username').value.trim();
-  const pass = document.getElementById('login-password').value;
-  const cred = credenciales[user];
-  if (!cred || cred.pass !== pass) {
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  try {
+    const data = await api('/api/usuarios/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    loggedUser = data;
+    currentRole = data.rol;
+    document.getElementById('role-badge').textContent = data.rol.toUpperCase();
+    document.getElementById('user-avatar').textContent = data.initials;
+    document.getElementById('login-error').classList.remove('show');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-nav').style.display = 'flex';
+    document.getElementById('app-content').style.display = 'block';
+    showScreen('listado');
+  } catch (err) {
+    document.getElementById('login-error').textContent = '⚠ ' + err.message;
     document.getElementById('login-error').classList.add('show');
-    document.getElementById('login-error').textContent = '⚠ Usuario o contraseña incorrectos.';
-    return;
   }
-  // Check if user is active in usuarios list
-  const usuarioData = usuarios.find(u => u.username === user);
-  if (usuarioData && !usuarioData.activo) {
-    document.getElementById('login-error').classList.add('show');
-    document.getElementById('login-error').textContent = '⚠ Tu cuenta está desactivada. Contactá al administrador.';
-    return;
-  }
-  document.getElementById('login-error').classList.remove('show');
-  loggedUser = { username: user, ...cred };
-  currentRole = cred.rol;
-
-  // Update nav user info
-  document.getElementById('role-badge').textContent = cred.rol.toUpperCase();
-  document.getElementById('user-avatar').textContent = cred.initials;
-
-  // Show app, hide login
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('main-nav').style.display = 'flex';
-  document.getElementById('app-content').style.display = 'block';
-
-  showScreen('listado');
 }
 
 function doLogout() {
-  loggedUser = null;
-  currentRole = 'Operador';
+  loggedUser = null; currentRole = 'Operador';
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('main-nav').style.display = 'none';
   document.getElementById('app-content').style.display = 'none';
 }
-
-renderListado();
-document.getElementById('tracking-preview').textContent='LT-2026-'+String(nextNum).padStart(4,'0');
 
 // ── Bulk Load Screen ────────────────────────────────────────────────────────
 document.getElementById('app-content').insertAdjacentHTML('beforeend', `
@@ -994,7 +999,7 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
     <div class="flex-between">
       <div>
         <h1>📦 Carga por Lote</h1>
-        <p>Generá envíos de prueba de forma masiva para testear el sistema (Mock Data / Datos Semilla)</p>
+        <p>Generá envíos de prueba de forma masiva para testear el sistema</p>
       </div>
     </div>
   </div>
@@ -1002,7 +1007,7 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
     <div class="card">
       <div class="card-title">Generador automático de envíos</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:20px">
-        Generá envíos simulados con datos realistas (remitentes, destinatarios, direcciones y estados aleatorios en todo el territorio argentino).
+        Generá envíos simulados con datos realistas. Se guardan en la base de datos real.
       </div>
       <div class="form-group" style="margin-bottom:16px">
         <label>Cantidad de envíos a generar</label>
@@ -1021,175 +1026,44 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
   </div>
   <div class="card">
     <div class="flex-between" style="margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:0">Estado de la base de datos mock</div>
-      <button class="btn btn-ghost btn-sm" onclick="limpiarEnvios()" style="color:var(--danger);border-color:rgba(240,80,64,0.3)">🗑 Limpiar todos</button>
+      <div class="card-title" style="margin-bottom:0">Estado actual de la BD</div>
+      <button class="btn btn-ghost btn-sm" onclick="actualizarBulkStats()">↻ Actualizar</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
-      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono)" id="bulk-total">0</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Total</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:24px;font-weight:800;color:var(--text-muted);font-family:var(--mono)" id="bulk-creado">0</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Creado</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono)" id="bulk-prep">0</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">En Preparación</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:24px;font-weight:800;color:var(--accent2);font-family:var(--mono)" id="bulk-transit">0</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">En Tránsito</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px">
-        <div style="font-size:24px;font-weight:800;color:var(--success);font-family:var(--mono)" id="bulk-entreg">0</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Entregado</div>
-      </div>
-    </div>
-  </div>
-  <div class="card mt-16" style="border-color:rgba(160,120,240,0.2)">
-    <div class="card-title" style="color:#a78bfa">ℹ Mock API — Documentación</div>
-    <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
-      <div style="margin-bottom:12px">Este prototipo simula una <strong style="color:var(--text)">Mock API REST</strong> con los datos almacenados en memoria (array JavaScript). Las operaciones CRUD disponibles son:</div>
-      <div style="background:var(--surface2);border-radius:8px;padding:16px;font-family:var(--mono);font-size:12px;line-height:2">
-        <div><span style="color:#4ade80;font-weight:700">GET</span>    /api/envios ........... Listado paginado de envíos</div>
-        <div><span style="color:#4ade80;font-weight:700">GET</span>    /api/envios/:id ....... Detalle de un envío por tracking ID</div>
-        <div><span style="color:#60a5fa;font-weight:700">POST</span>   /api/envios ........... Alta de envío con tracking ID automático</div>
-        <div><span style="color:#fb923c;font-weight:700">PUT</span>    /api/envios/:id ....... Edición de envío en estado Creado</div>
-        <div><span style="color:#fb923c;font-weight:700">PATCH</span>  /api/envios/:id/estado  Cambio de estado (solo Supervisor)</div>
-        <div><span style="color:#f05040;font-weight:700">DELETE</span> /api/envios/:id ....... Eliminación (solo Admin, estado Creado)</div>
-        <div style="margin-top:8px"><span style="color:#4ade80;font-weight:700">GET</span>    /api/envios/search?q=   Búsqueda por tracking ID o nombre</div>
-        <div><span style="color:#60a5fa;font-weight:700">POST</span>   /api/envios/bulk ...... Carga masiva de envíos (lote)</div>
-      </div>
-      <div style="margin-top:12px">En Semana 3, estos endpoints se implementarán como una API real con persistencia en base de datos. En esta etapa, los datos se almacenan en un array JavaScript en memoria como datos semilla.</div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono)" id="bulk-total">—</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Total</div></div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:24px;font-weight:800;color:var(--text-muted);font-family:var(--mono)" id="bulk-creado">—</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Creado</div></div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:24px;font-weight:800;color:var(--accent);font-family:var(--mono)" id="bulk-prep">—</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">En Preparación</div></div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:24px;font-weight:800;color:var(--accent2);font-family:var(--mono)" id="bulk-transit">—</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">En Tránsito</div></div>
+      <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:24px;font-weight:800;color:var(--success);font-family:var(--mono)" id="bulk-entreg">—</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Entregado</div></div>
     </div>
   </div>
 </div>
 `);
 
-// Bulk load data generators
-const nombresRemitentes = [
-  'Distribuidora Palermo S.A.','Logística Sur SRL','Grupo Norte Express','TechStore Argentina','Farmacia del Pueblo','Librería Nacional','Electro Hogar','MegaDistribuciones','Patagonia Logistics','Envíos Rápidos CABA',
-  'Transportes Unión','Correo Federal S.A.','Industrial del Norte','AgriPack SRL','Mercado Express','ViniTech S.A.','ToolBox Argentina','Papelera del Centro','FrioExpress SA','MotoEnvíos BA'
-];
-const nombresDestinatarios = [
-  'Carlos Romero','Ana Martínez','Pedro Vidal','Lucía Fernández','Jorge López','Marta Rodríguez','Diego Sánchez','Valentina García','Santiago Moreno','Camila Díaz',
-  'Matías Ruiz','Florencia Torres','Nicolás Pereyra','Julieta Álvarez','Tomás Castro','Mariana Giménez','Agustín Medina','Paula Herrera','Lucas Acosta','Carolina Figueroa',
-  'Roberto Méndez','Soledad Navarro','Fernando Paz','Daniela Suárez','Emiliano Rojas','Micaela Muñoz','Joaquín Domínguez','Romina Molina','Gabriel Ortiz','Andrea Villalba'
-];
-const provincias = ['Buenos Aires','CABA','Córdoba','Santa Fe','Mendoza','Tucumán','Salta','Neuquén','Entre Ríos','Misiones','Chaco','Corrientes','Santiago del Estero','San Juan','Jujuy','Río Negro','Formosa','Chubut','San Luis','Catamarca','La Rioja','La Pampa','Santa Cruz','Tierra del Fuego'];
-const ciudades = {
-  'Buenos Aires':['La Plata','Mar del Plata','Bahía Blanca','Tandil','Quilmes','Avellaneda','Lanús','Morón'],
-  'CABA':['Palermo','Belgrano','Recoleta','San Telmo','Caballito','Flores','Villa Urquiza','Barracas'],
-  'Córdoba':['Córdoba','Villa María','Río Cuarto','Carlos Paz','Bell Ville'],
-  'Santa Fe':['Rosario','Santa Fe','Rafaela','Venado Tuerto','Reconquista'],
-  'Mendoza':['Mendoza','San Rafael','Godoy Cruz','Maipú','Luján de Cuyo'],
-  'Tucumán':['San Miguel de Tucumán','Yerba Buena','Tafí Viejo','Banda del Río Salí'],
-  'Salta':['Salta','San Lorenzo','Tartagal','Orán'],
-  'Neuquén':['Neuquén','San Martín de los Andes','Zapala','Plottier'],
-  'Entre Ríos':['Paraná','Concordia','Gualeguaychú','Concepción del Uruguay'],
-  'Misiones':['Posadas','Oberá','Eldorado','Iguazú'],
-  'Chaco':['Resistencia','Barranqueras','Sáenz Peña'],
-  'Corrientes':['Corrientes','Goya','Mercedes'],
-  'Santiago del Estero':['Santiago del Estero','La Banda','Termas de Río Hondo'],
-  'San Juan':['San Juan','Rawson','Rivadavia'],
-  'Jujuy':['San Salvador de Jujuy','Palpalá','Libertador Gral. San Martín'],
-  'Río Negro':['Viedma','Bariloche','General Roca','Cipolletti'],
-  'Formosa':['Formosa','Clorinda'],
-  'Chubut':['Rawson','Trelew','Comodoro Rivadavia','Esquel'],
-  'San Luis':['San Luis','Villa Mercedes','Merlo'],
-  'Catamarca':['San Fernando del Valle de Catamarca','Tinogasta'],
-  'La Rioja':['La Rioja','Chilecito'],
-  'La Pampa':['Santa Rosa','General Pico','Toay'],
-  'Santa Cruz':['Río Gallegos','Caleta Olivia','El Calafate'],
-  'Tierra del Fuego':['Ushuaia','Río Grande','Tolhuin']
-};
-const calles = ['Av. San Martín','Av. Rivadavia','Belgrano','Mitre','Sarmiento','Av. Corrientes','25 de Mayo','9 de Julio','Urquiza','Moreno','Lavalle','Güemes','Alberdi','Pellegrini','Colón','Italia','España','Entre Ríos','Tucumán','Catamarca'];
-const tiposPaquete = ['Caja estándar','Sobre','Pallet','Frágil','Refrigerado'];
-const estados = ['Creado','En Preparación','En Tránsito','Entregado'];
-const operadores = ['op.gonzalez','op.ramirez','op.garcia','sup.montero'];
-
-function randomFrom(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
-function randomInt(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
-
-function generarEnvioAleatorio() {
-  const provOrigen = randomFrom(provincias);
-  const provDestino = randomFrom(provincias);
-  const ciudadOrigen = randomFrom(ciudades[provOrigen]||['Centro']);
-  const ciudadDestino = randomFrom(ciudades[provDestino]||['Centro']);
-  const calleOrig = randomFrom(calles)+' '+randomInt(100,9999);
-  const calleDest = randomFrom(calles)+' '+randomInt(100,9999);
-  const estadoIdx = randomInt(0,3);
-  const estado = estados[estadoIdx];
-  const dia = randomInt(1,28);
-  const mes = randomInt(1,3);
-  const fecha = `2026-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-  
-  // Build historial up to current state
-  let historial = [];
-  const baseHour = randomInt(7,18);
-  for(let i=0;i<=estadoIdx;i++) {
-    const h = baseHour + i*2;
-    const m = randomInt(0,59);
-    historial.push({
-      estado: estados[i],
-      ts: `${fecha} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`,
-      usuario: i===0 ? randomFrom(['op.gonzalez','op.ramirez','op.garcia']) : (i>0 ? 'sup.montero' : randomFrom(operadores))
-    });
-  }
-  
-  const id = 'LT-2026-'+String(nextNum).padStart(4,'0');
-  nextNum++;
-  
-  return {
-    id,
-    remitente: randomFrom(nombresRemitentes),
-    destinatario: randomFrom(nombresDestinatarios),
-    origen: provOrigen+', '+ciudadOrigen+', '+calleOrig,
-    destino: provDestino+', '+ciudadDestino+', '+calleDest,
-    telDestinatario: Math.random()>0.3 ? `+54 9 ${randomInt(100,999)} ${randomInt(100,999)}-${String(randomInt(0,9999)).padStart(4,'0')}` : '',
-    tipo: randomFrom(tiposPaquete),
-    peso: (randomInt(1,500)/10).toFixed(1),
-    obs: Math.random()>0.7 ? randomFrom(['Frágil','Entregar en horario laboral','Dejar en portería','Llamar antes de entregar','No apilar','Requiere firma']) : '',
-    estado,
-    fecha,
-    historial
-  };
-}
-
-function generarEnviosLote() {
+async function generarEnviosLote() {
   const n = parseInt(document.getElementById('bulk-count').value) || 50;
-  const cant = Math.min(Math.max(n,1),500);
-  for(let i=0;i<cant;i++) {
-    envios.push(generarEnvioAleatorio());
+  const cant = Math.min(Math.max(n, 1), 500);
+  try {
+    const res = await api('/api/envios/bulk', { method: 'POST', body: JSON.stringify({ cantidad: cant }) });
+    actualizarBulkStats();
+    document.getElementById('bulk-success-msg').textContent = res.mensaje;
+    document.getElementById('bulk-success-modal').classList.add('show');
+  } catch (err) {
+    alert('Error: ' + err.message);
   }
-  actualizarBulkStats();
-  document.getElementById('bulk-success-msg').textContent = `Se generaron ${cant} envíos simulados correctamente. Total en sistema: ${envios.length}`;
-  document.getElementById('bulk-success-modal').classList.add('show');
 }
 
-function actualizarBulkStats() {
-  document.getElementById('bulk-total').textContent = envios.length;
-  document.getElementById('bulk-creado').textContent = envios.filter(e=>e.estado==='Creado').length;
-  document.getElementById('bulk-prep').textContent = envios.filter(e=>e.estado==='En Preparación').length;
-  document.getElementById('bulk-transit').textContent = envios.filter(e=>e.estado==='En Tránsito').length;
-  document.getElementById('bulk-entreg').textContent = envios.filter(e=>e.estado==='Entregado').length;
+async function actualizarBulkStats() {
+  try {
+    const m = await api('/api/envios/metricas');
+    document.getElementById('bulk-total').textContent = m.total;
+    document.getElementById('bulk-creado').textContent = m.creado;
+    document.getElementById('bulk-prep').textContent = m.en_preparacion;
+    document.getElementById('bulk-transit').textContent = m.en_transito;
+    document.getElementById('bulk-entreg').textContent = m.entregado;
+  } catch {}
 }
 
-function limpiarEnvios() {
-  if(!confirm('¿Estás seguro de eliminar todos los envíos? Esta acción no se puede deshacer.')) return;
-  envios.length = 0;
-  nextNum = 1;
-  actualizarBulkStats();
-  renderListado();
-}
-
-// Update showScreen to handle bulk
-const _origShowScreen = showScreen;
-showScreen = function(name) {
-  _origShowScreen(name);
-  if(name==='bulk') actualizarBulkStats();
-};
 </script>
 
 <!-- IA SCREEN -->
