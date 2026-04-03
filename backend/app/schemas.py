@@ -2,6 +2,18 @@ from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional, List
 from datetime import datetime
 
+def _validar_ciudad(valor: Optional[str], campo: str) -> Optional[str]:
+    if valor is None:
+        return valor
+    valor = valor.strip()
+    if len(valor) < 3:
+        raise ValueError(f"{campo}: mínimo 3 caracteres")
+
+    import re
+    if not re.fullmatch(r"[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+", valor):
+        raise ValueError(f"{campo}: solo se permiten letras y espacios")
+    return valor
+
 
 def _validar_nombre(valor: Optional[str], campo: str) -> Optional[str]:
     if valor is None:
@@ -24,8 +36,12 @@ def _validar_direccion(valor: Optional[str], campo: str) -> Optional[str]:
         raise ValueError(f"{campo}: campo obligatorio")
 
     import re
-    if not re.search(r"\d", valor):
-        raise ValueError(f"{campo}: debe incluir un número")
+    if len(valor) < 5:
+        raise ValueError(f"{campo}: ingresá una dirección válida")
+
+    if not re.search(r"[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]", valor) or not re.search(r"\d", valor):
+        raise ValueError(f"{campo}: formato requerido calle y número. Ej: Sargento Roca 1413")
+
     return valor
 
 
@@ -45,6 +61,9 @@ def _validar_telefono(valor: Optional[str]) -> Optional[str]:
 def _validar_tipo_peso(tipo_paquete: Optional[str], peso_kg: Optional[float]) -> None:
     if peso_kg is None:
         return
+
+    if peso_kg < 0:
+        raise ValueError("El peso no puede ser negativo")
 
     if tipo_paquete == "Sobre" and peso_kg > 2:
         raise ValueError("Un Sobre no puede superar 2 kg")
@@ -101,6 +120,11 @@ class EnvioCreate(BaseModel):
     def validar_nombres(cls, value, info):
         return _validar_nombre(value, info.field_name)
 
+    @field_validator("origen_ciudad", "destino_ciudad")
+    @classmethod
+    def validar_ciudades(cls, value, info):
+        return _validar_ciudad(value, info.field_name)
+
     @field_validator("origen_direccion", "destino_direccion")
     @classmethod
     def validar_direcciones(cls, value, info):
@@ -136,6 +160,11 @@ class EnvioUpdate(BaseModel):
     def validar_nombres(cls, value, info):
         return _validar_nombre(value, info.field_name)
 
+    @field_validator("origen_ciudad", "destino_ciudad")
+    @classmethod
+    def validar_ciudades(cls, value, info):
+        return _validar_ciudad(value, info.field_name)
+
     @field_validator("origen_direccion", "destino_direccion")
     @classmethod
     def validar_direcciones(cls, value, info):
@@ -150,7 +179,6 @@ class EnvioUpdate(BaseModel):
     def validar_peso_tipo(self):
         _validar_tipo_peso(self.tipo_paquete, self.peso_kg)
         return self
-
 class EnvioOut(BaseModel):
     tracking_id: str
     remitente: str

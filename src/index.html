@@ -885,9 +885,27 @@ function validarNombre(val) {
   return null;
 }
 
+function validarCiudad(val) {
+  if (!val) return 'Campo obligatorio.';
+  const limpio = val.trim();
+  if (limpio.length < 3) return 'Mínimo 3 caracteres.';
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(limpio)) {
+    return 'Solo se permiten letras y espacios.';
+  }
+  return null;
+}
+
 function validarDireccion(val) {
   if (!val) return 'Campo obligatorio.';
-  if (!/\d/.test(val)) return 'Debe incluir un número (ej: Av. San Martín 1234).';
+  const limpio = val.trim();
+
+  if (limpio.length < 5) return 'Ingresá una dirección válida.';
+
+  // Debe tener letras y al menos un número
+  if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/.test(limpio) || !/\d/.test(limpio)) {
+    return 'Formato requerido: nombre de la calle y número. Ej: Sargento Roca 1413';
+  }
+
   return null;
 }
 
@@ -926,11 +944,13 @@ async function crearEnvio() {
   if (!dst) { setFieldError('f-destino','err-destino','Seleccioná una provincia.'); hasError = true; }
   else clearFieldError('f-destino','err-destino');
 
-  if (!origCiudad) { setFieldError('f-origen-ciudad','err-origen-ciudad','Campo obligatorio.'); hasError = true; }
-  else clearFieldError('f-origen-ciudad','err-origen-ciudad');
+e = validarCiudad(origCiudad);
+if (e) { setFieldError('f-origen-ciudad','err-origen-ciudad', e); hasError = true; }
+else clearFieldError('f-origen-ciudad','err-origen-ciudad');
 
-  if (!dstCiudad) { setFieldError('f-destino-ciudad','err-destino-ciudad','Campo obligatorio.'); hasError = true; }
-  else clearFieldError('f-destino-ciudad','err-destino-ciudad');
+e = validarCiudad(dstCiudad);
+if (e) { setFieldError('f-destino-ciudad','err-destino-ciudad', e); hasError = true; }
+else clearFieldError('f-destino-ciudad','err-destino-ciudad');
 
   e = validarDireccion(origCalle);
   if (e) { setFieldError('f-origen-calle','err-origen-calle', e); hasError = true; }
@@ -944,11 +964,18 @@ async function crearEnvio() {
   if (e) { setFieldError('f-tel-destinatario','err-tel', e); hasError = true; }
   else clearFieldError('f-tel-destinatario','err-tel');
 
-  const peso = parseFloat(pesoStr) || null;
-  clearFieldError('f-peso','err-peso');
-  clearFieldError('f-tipo','err-tipo');
+  const peso = pesoStr === '' ? null : parseFloat(pesoStr);
+clearFieldError('f-peso','err-peso');
+clearFieldError('f-tipo','err-tipo');
 
-  if (peso !== null) {
+if (peso !== null) {
+  if (isNaN(peso)) {
+    setFieldError('f-peso','err-peso','Ingresá un peso válido.');
+    hasError = true;
+  } else if (peso < 0) {
+    setFieldError('f-peso','err-peso','El peso no puede ser negativo.');
+    hasError = true;
+  } else {
     if (tipo === 'Sobre' && peso > 2) {
       setFieldError('f-peso','err-peso','Un Sobre no puede superar 2 kg.');
       hasError = true;
@@ -958,6 +985,7 @@ async function crearEnvio() {
       hasError = true;
     }
   }
+}
 
   if (hasError) {
     document.getElementById('form-error').style.display = 'block';
@@ -1089,11 +1117,13 @@ async function guardarEdicion() {
   if (!dst) { setFieldError('edit-destino','err-edit-destino','Seleccioná una provincia.'); hasError = true; }
   else clearFieldError('edit-destino','err-edit-destino');
 
-  if (!origCiudad) { setFieldError('edit-origen-ciudad','err-edit-origen-ciudad','Campo obligatorio.'); hasError = true; }
-  else clearFieldError('edit-origen-ciudad','err-edit-origen-ciudad');
+err = validarCiudad(origCiudad);
+if (err) { setFieldError('edit-origen-ciudad','err-edit-origen-ciudad', err); hasError = true; }
+else clearFieldError('edit-origen-ciudad','err-edit-origen-ciudad');
 
-  if (!dstCiudad) { setFieldError('edit-destino-ciudad','err-edit-destino-ciudad','Campo obligatorio.'); hasError = true; }
-  else clearFieldError('edit-destino-ciudad','err-edit-destino-ciudad');
+err = validarCiudad(dstCiudad);
+if (err) { setFieldError('edit-destino-ciudad','err-edit-destino-ciudad', err); hasError = true; }
+else clearFieldError('edit-destino-ciudad','err-edit-destino-ciudad');
 
   err = validarDireccion(origCalle);
   if (err) { setFieldError('edit-origen-calle','err-edit-origen-calle',err); hasError = true; }
@@ -1110,8 +1140,15 @@ async function guardarEdicion() {
   clearFieldError('edit-peso','err-edit-peso');
   clearFieldError('edit-tipo','err-edit-tipo');
 
-  const peso = parseFloat(pesoStr) || null;
-  if (peso !== null) {
+  const peso = pesoStr === '' ? null : parseFloat(pesoStr);
+if (peso !== null) {
+  if (isNaN(peso)) {
+    setFieldError('edit-peso','err-edit-peso','Ingresá un peso válido.');
+    hasError = true;
+  } else if (peso < 0) {
+    setFieldError('edit-peso','err-edit-peso','El peso no puede ser negativo.');
+    hasError = true;
+  } else {
     if (tipo === 'Sobre' && peso > 2) {
       setFieldError('edit-peso','err-edit-peso','Un Sobre no puede superar 2 kg.');
       hasError = true;
@@ -1121,6 +1158,7 @@ async function guardarEdicion() {
       hasError = true;
     }
   }
+}
 
   if (hasError) {
     document.getElementById('edit-error').style.display = 'block';
