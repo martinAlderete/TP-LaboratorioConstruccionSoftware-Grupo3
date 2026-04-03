@@ -184,6 +184,52 @@ def cambiar_estado(
     return envio
 
 
+# ── Editar envío (solo estado Creado) ─────────────────────────────────────────
+
+@router.put("/{tracking_id}", response_model=schemas.EnvioOut)
+def editar_envio(
+    tracking_id: str,
+    data: schemas.EnvioUpdate,
+    usuario: str = Query("sistema"),
+    db: Session = Depends(get_db)
+):
+    envio = db.query(models.Envio).filter(models.Envio.tracking_id == tracking_id).first()
+    if not envio:
+        raise HTTPException(status_code=404, detail="Envío no encontrado")
+    if envio.estado != "Creado":
+        raise HTTPException(status_code=400, detail="Solo se pueden editar envíos en estado 'Creado'")
+    for field, value in data.dict(exclude_none=True).items():
+        setattr(envio, field, value)
+    evento = models.EventoTracking(
+        tracking_id=tracking_id,
+        estado_anterior="Creado",
+        estado_nuevo="Creado",
+        usuario=usuario,
+        observaciones="Datos del envío editados",
+    )
+    db.add(evento)
+    db.commit()
+    db.refresh(envio)
+    return envio
+
+
+# ── Eliminar envío ────────────────────────────────────────────────────────────
+
+@router.delete("/{tracking_id}", status_code=204)
+def eliminar_envio(
+    tracking_id: str,
+    db: Session = Depends(get_db)
+):
+    envio = db.query(models.Envio).filter(models.Envio.tracking_id == tracking_id).first()
+    if not envio:
+        raise HTTPException(status_code=404, detail="Envío no encontrado")
+    db.query(models.EventoTracking).filter(
+        models.EventoTracking.tracking_id == tracking_id
+    ).delete()
+    db.delete(envio)
+    db.commit()
+
+
 # ── Carga por lote ────────────────────────────────────────────────────────────
 
 @router.post("/bulk", status_code=201)

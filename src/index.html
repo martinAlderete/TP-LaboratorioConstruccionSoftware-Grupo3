@@ -203,11 +203,21 @@
   .flex-between { display: flex; align-items: center; justify-content: space-between; }
   .mt-16 { margin-top: 16px; }
   .separator { height: 1px; background: var(--border); margin: 20px 0; }
+  .btn-danger { background: rgba(240,80,64,0.15); color: var(--danger); border: 1px solid rgba(240,80,64,0.4); }
+  .btn-danger:hover { background: rgba(240,80,64,0.3); transform: translateY(-1px); }
+  .edit-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 400; }
+  .edit-modal-overlay.show { display: flex; }
+  .edit-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; max-width: 720px; width: 95%; max-height: 90vh; overflow-y: auto; }
+  .edit-modal h3 { font-family: var(--display); font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+  .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 500; }
+  .confirm-overlay.show { display: flex; }
+  .confirm-modal { background: var(--surface); border: 1px solid rgba(240,80,64,0.4); border-radius: 12px; padding: 36px; max-width: 420px; width: 90%; text-align: center; }
+  .confirm-modal h3 { font-family: var(--display); font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--danger); }
+  .confirm-modal p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
 <div id="login-screen" class="login-wrap">
   <div class="login-card">
     <div class="login-logo">⬡ LogiTrack</div>
@@ -268,7 +278,7 @@
     <button class="nav-link" onclick="showScreen('usuarios')">Usuarios</button>
     <button class="nav-link arco-link" onclick="showScreen('arco')">🔒 Mis Datos</button>
     <button class="nav-link" onclick="showScreen('ia')" style="margin-left:8px;border:1px solid rgba(100,200,150,0.3);color:#4ade80">🧠 IA Demoras</button>
-    <button class="nav-link" onclick="showScreen('bulk')" style="margin-left:4px;border:1px solid rgba(160,120,240,0.3);color:#a78bfa">📦 Carga Lote</button>
+    <button class="nav-link" id="nav-bulk-link" onclick="showScreen('bulk')" style="margin-left:4px;border:1px solid rgba(160,120,240,0.3);color:#a78bfa">📦 Carga Lote</button>
   </div>
   <div class="nav-user">
     <div class="role-switcher" onclick="doLogout()" title="Cerrar sesión" style="color:var(--danger);border-color:rgba(240,80,64,0.3)">⎋ Cerrar sesión</div>
@@ -277,7 +287,6 @@
   </div>
 </nav>
 
-<!-- LISTADO -->
 <div id="app-content" style="display:none"><div class="screen active" id="screen-listado">
   <div class="page-header">
     <div class="flex-between">
@@ -312,7 +321,6 @@
   </div>
 </div>
 
-<!-- ALTA -->
 <div class="screen" id="screen-alta">
   <button class="back-btn" onclick="showScreen('listado')">← Volver al Dashboard</button>
   <div class="page-header">
@@ -323,22 +331,66 @@
     <div class="card">
       <div class="card-title">Datos del Envío</div>
       <div class="form-grid">
-        <div class="form-group"><label>Nombre Remitente *</label><input type="text" id="f-remitente" placeholder="Ej: Distribuidora Palermo S.A." oninput="this.classList.remove('error');if(!document.querySelector('.error'))document.getElementById('form-error').style.display='none'"></div>
-        <div class="form-group"><label>Nombre Destinatario *</label><input type="text" id="f-destinatario" placeholder="Ej: Juan García" oninput="this.classList.remove('error');if(!document.querySelector('.error'))document.getElementById('form-error').style.display='none'"></div>
-        <div class="form-group"><label>Provincia de Origen *</label>
-          <select id="f-origen"><option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Neuquén</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option></select>
+        <div class="form-group">
+          <label>Nombre Remitente *</label>
+          <input type="text" id="f-remitente" placeholder="Ej: Distribuidora Palermo S.A." oninput="clearFieldError('f-remitente','err-remitente')">
+          <span class="field-error" id="err-remitente"></span>
         </div>
-        <div class="form-group"><label>Ciudad de Origen *</label><input type="text" id="f-origen-ciudad" placeholder="Ej: Rosario"></div>
-        <div class="form-group"><label>Calle y número de Origen *</label><input type="text" id="f-origen-calle" placeholder="Ej: Av. Pellegrini 1234"></div>
-        <div class="form-group"><label>Provincia de Destino *</label>
-          <select id="f-destino"><option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Neuquén</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option></select>
+        <div class="form-group">
+          <label>Nombre Destinatario *</label>
+          <input type="text" id="f-destinatario" placeholder="Ej: Juan García" oninput="clearFieldError('f-destinatario','err-destinatario')">
+          <span class="field-error" id="err-destinatario"></span>
         </div>
-        <div class="form-group"><label>Ciudad de Destino *</label><input type="text" id="f-destino-ciudad" placeholder="Ej: Mendoza"></div>
-        <div class="form-group"><label>Calle y número de Destino *</label><input type="text" id="f-destino-calle" placeholder="Ej: San Martín 456, Piso 2"></div>
-        <div class="form-group"><label>Teléfono del Destinatario <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(opcional)</span></label><input type="text" id="f-tel-destinatario" placeholder="Ej: +54 9 261 555-1234"></div>
-        <div class="form-group"><label>Peso (kg)</label><input type="number" id="f-peso" placeholder="0.0" min="0" step="0.1"></div>
-        <div class="form-group"><label>Tipo de Paquete</label>
-          <select id="f-tipo"><option>Caja estándar</option><option>Sobre</option><option>Pallet</option><option>Frágil</option><option>Refrigerado</option></select>
+        <div class="form-group">
+          <label>Provincia de Origen *</label>
+          <select id="f-origen" onchange="clearFieldError('f-origen','err-origen')">
+            <option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
+          </select>
+          <span class="field-error" id="err-origen"></span>
+        </div>
+        <div class="form-group">
+          <label>Ciudad de Origen *</label>
+          <input type="text" id="f-origen-ciudad" placeholder="Ej: Rosario" oninput="clearFieldError('f-origen-ciudad','err-origen-ciudad')">
+          <span class="field-error" id="err-origen-ciudad"></span>
+        </div>
+        <div class="form-group">
+          <label>Calle y número de Origen *</label>
+          <input type="text" id="f-origen-calle" placeholder="Ej: Av. Pellegrini 1234" oninput="clearFieldError('f-origen-calle','err-origen-calle')">
+          <span class="field-error" id="err-origen-calle"></span>
+        </div>
+        <div class="form-group">
+          <label>Provincia de Destino *</label>
+          <select id="f-destino" onchange="clearFieldError('f-destino','err-destino')">
+            <option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
+          </select>
+          <span class="field-error" id="err-destino"></span>
+        </div>
+        <div class="form-group">
+          <label>Ciudad de Destino *</label>
+          <input type="text" id="f-destino-ciudad" placeholder="Ej: Mendoza" oninput="clearFieldError('f-destino-ciudad','err-destino-ciudad')">
+          <span class="field-error" id="err-destino-ciudad"></span>
+        </div>
+        <div class="form-group">
+          <label>Calle y número de Destino *</label>
+          <input type="text" id="f-destino-calle" placeholder="Ej: San Martín 456, Piso 2" oninput="clearFieldError('f-destino-calle','err-destino-calle')">
+          <span class="field-error" id="err-destino-calle"></span>
+        </div>
+        <div class="form-group">
+          <label>Teléfono del Destinatario <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(opcional)</span></label>
+          <input type="text" id="f-tel-destinatario" placeholder="Ej: +54 9 261 555-1234" oninput="clearFieldError('f-tel-destinatario','err-tel')">
+          <span class="field-error" id="err-tel"></span>
+        </div>
+        <div class="form-group">
+          <label>Peso (kg)</label>
+          <input type="number" id="f-peso" placeholder="0.0" min="0" step="0.1" oninput="clearFieldError('f-peso','err-peso')">
+          <span class="field-error" id="err-peso"></span>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Paquete</label>
+          <select id="f-tipo" onchange="clearFieldError('f-tipo','err-tipo')">
+            <option>Caja estándar</option><option>Sobre</option><option>Pallet</option><option>Frágil</option><option>Refrigerado</option>
+          </select>
+          <span class="field-error" id="err-tipo"></span>
         </div>
         <div class="form-group full"><label>Observaciones</label><textarea id="f-obs" placeholder="Instrucciones especiales, referencias de entrega, etc."></textarea></div>
       </div>
@@ -368,7 +420,6 @@
   </div>
 </div>
 
-<!-- BUSQUEDA -->
 <div class="screen" id="screen-busqueda">
   <div class="page-header">
     <h1>Buscar Envíos</h1>
@@ -401,13 +452,11 @@
   </div>
 </div>
 
-<!-- DETALLE -->
 <div class="screen" id="screen-detalle">
   <button class="back-btn" id="back-from-detail">← Volver</button>
   <div id="detalle-content"></div>
 </div>
 
-<!-- MODAL -->
 <div class="modal-overlay" id="success-modal">
   <div class="modal">
     <div class="modal-icon">✅</div>
@@ -421,7 +470,6 @@
   </div>
 </div>
 
-<!-- ARCO - Derechos sobre datos personales -->
 <div class="screen" id="screen-arco">
   <div class="page-header">
     <div class="flex-between">
@@ -488,7 +536,6 @@
   </div>
 </div>
 
-<!-- USUARIOS - Gestión de usuarios (solo Administrador) -->
 <div class="screen" id="screen-usuarios">
   <div class="page-header">
     <div class="flex-between">
@@ -506,17 +553,38 @@
     <div class="card" style="border-color:rgba(64,240,160,0.2)">
       <div class="card-title">Nuevo Usuario</div>
       <div class="form-grid">
-        <div class="form-group"><label>Nombre completo *</label><input type="text" id="nu-nombre" placeholder="Ej: María González"></div>
-        <div class="form-group"><label>Nombre de usuario *</label><input type="text" id="nu-username" placeholder="Ej: op.gonzalez"></div>
-        <div class="form-group"><label>Rol *</label>
+        <div class="form-group">
+          <label>Nombre completo *</label>
+          <input type="text" id="nu-nombre" placeholder="Ej: María González">
+          <span class="field-error" id="err-nu-nombre"></span>
+        </div>
+        <div class="form-group">
+          <label>Nombre de usuario *</label>
+          <input type="text" id="nu-username" placeholder="Ej: op.gonzalez">
+          <span class="field-error" id="err-nu-username"></span>
+        </div>
+        <div class="form-group">
+          <label>Rol *</label>
           <select id="nu-rol">
             <option value="">— Seleccioná un rol —</option>
             <option value="Operador">Operador</option>
             <option value="Supervisor">Supervisor</option>
           </select>
+          <span class="field-error" id="err-nu-rol"></span>
         </div>
-        <div class="form-group"><label>Estado</label>
+        <div class="form-group">
+          <label>Estado</label>
           <select id="nu-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select>
+        </div>
+        <div class="form-group">
+          <label>Contraseña * <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(mín. 8 caracteres)</span></label>
+          <input type="password" id="nu-password" placeholder="••••••••">
+          <span class="field-error" id="err-nu-password"></span>
+        </div>
+        <div class="form-group">
+          <label>Confirmar contraseña *</label>
+          <input type="password" id="nu-password2" placeholder="••••••••">
+          <span class="field-error" id="err-nu-password2"></span>
         </div>
       </div>
       <div id="nu-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px;padding:10px 14px;background:rgba(240,80,64,0.08);border-radius:6px;border:1px solid rgba(240,80,64,0.25)">⚠ Completá todos los campos obligatorios.</div>
@@ -532,10 +600,7 @@
   </div>
 </div>
 
-</div><!-- /app-content -->
-
-<!-- MODAL CARGA POR LOTE EXITOSA -->
-<div class="modal-overlay" id="bulk-success-modal">
+</div><div class="modal-overlay" id="bulk-success-modal">
   <div class="modal">
     <div class="modal-icon">📦</div>
     <h2>¡Carga por lote exitosa!</h2>
@@ -546,7 +611,99 @@
   </div>
 </div>
 
-<!-- MODAL CAMBIO DE ESTADO CON OBSERVACIONES -->
+<div class="confirm-overlay" id="confirm-delete-modal">
+  <div class="confirm-modal">
+    <div style="font-size:40px;margin-bottom:12px">🗑</div>
+    <h3>Eliminar envío</h3>
+    <p>¿Estás seguro que querés eliminar el envío <strong id="confirm-delete-id" style="color:var(--accent2)"></strong>? Esta acción <strong>no se puede deshacer</strong> y se eliminará todo el historial.</p>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="btn btn-ghost" onclick="document.getElementById('confirm-delete-modal').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-danger" onclick="ejecutarEliminar()">Sí, eliminar →</button>
+    </div>
+  </div>
+</div>
+
+<div class="edit-modal-overlay" id="edit-envio-modal">
+  <div class="edit-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3 style="margin-bottom:0">✏ Editar Envío <span id="edit-modal-tracking" style="font-family:var(--mono);color:var(--accent2);font-size:16px"></span></h3>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('edit-envio-modal').classList.remove('show')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nombre Remitente *</label>
+        <input type="text" id="edit-remitente" placeholder="Ej: Distribuidora Palermo S.A.">
+        <span class="field-error" id="err-edit-remitente"></span>
+      </div>
+      <div class="form-group">
+        <label>Nombre Destinatario *</label>
+        <input type="text" id="edit-destinatario" placeholder="Ej: Juan García">
+        <span class="field-error" id="err-edit-destinatario"></span>
+      </div>
+      <div class="form-group">
+        <label>Provincia de Origen *</label>
+        <select id="edit-origen">
+          <option value="">— Seleccionar —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
+        </select>
+        <span class="field-error" id="err-edit-origen"></span>
+      </div>
+      <div class="form-group">
+        <label>Ciudad de Origen *</label>
+        <input type="text" id="edit-origen-ciudad" placeholder="Ej: Rosario">
+        <span class="field-error" id="err-edit-origen-ciudad"></span>
+      </div>
+      <div class="form-group">
+        <label>Calle y número de Origen *</label>
+        <input type="text" id="edit-origen-calle" placeholder="Ej: Av. Pellegrini 1234">
+        <span class="field-error" id="err-edit-origen-calle"></span>
+      </div>
+      <div class="form-group">
+        <label>Provincia de Destino *</label>
+        <select id="edit-destino">
+          <option value="">— Seleccionar —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
+        </select>
+        <span class="field-error" id="err-edit-destino"></span>
+      </div>
+      <div class="form-group">
+        <label>Ciudad de Destino *</label>
+        <input type="text" id="edit-destino-ciudad" placeholder="Ej: Mendoza">
+        <span class="field-error" id="err-edit-destino-ciudad"></span>
+      </div>
+      <div class="form-group">
+        <label>Calle y número de Destino *</label>
+        <input type="text" id="edit-destino-calle" placeholder="Ej: San Martín 456">
+        <span class="field-error" id="err-edit-destino-calle"></span>
+      </div>
+      <div class="form-group">
+        <label>Teléfono del Destinatario <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(opcional)</span></label>
+        <input type="text" id="edit-tel" placeholder="Ej: +54 9 261 555-1234">
+        <span class="field-error" id="err-edit-tel"></span>
+      </div>
+      <div class="form-group">
+        <label>Peso (kg)</label>
+        <input type="number" id="edit-peso" placeholder="0.0" min="0" step="0.1">
+        <span class="field-error" id="err-edit-peso"></span>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Paquete</label>
+        <select id="edit-tipo">
+          <option>Caja estándar</option><option>Sobre</option><option>Pallet</option><option>Frágil</option><option>Refrigerado</option>
+        </select>
+        <span class="field-error" id="err-edit-tipo"></span>
+      </div>
+      <div class="form-group full">
+        <label>Observaciones</label>
+        <textarea id="edit-obs" placeholder="Instrucciones especiales..."></textarea>
+      </div>
+    </div>
+    <div id="edit-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px;padding:10px 14px;background:rgba(240,80,64,0.08);border-radius:6px;border:1px solid rgba(240,80,64,0.25)">⚠ Corregí los errores marcados en rojo.</div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('edit-envio-modal').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEdicion()">Guardar cambios →</button>
+    </div>
+  </div>
+</div>
+
 <div class="obs-modal-overlay" id="obs-modal">
   <div class="obs-modal">
     <h3>Confirmar cambio de estado</h3>
@@ -612,6 +769,11 @@ function slug(e) {
 
 // ── Screens ───────────────────────────────────────────────────────────────────
 function showScreen(name) {
+  // Carga por Lote: solo Administrador
+  if (name === 'bulk' && currentRole !== 'Administrador') {
+    showScreen('listado');
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
@@ -643,10 +805,19 @@ async function renderListado() {
     tbody.innerHTML = '';
     if (data.items.length === 0) { empty.style.display = 'block'; document.getElementById('pagination-controls').innerHTML = ''; return; }
     empty.style.display = 'none';
+    const isAdmin = currentRole === 'Administrador';
+    // Actualizar encabezado de tabla
+    const thead = tbody.closest('table').querySelector('thead tr');
+    if (thead) {
+      thead.innerHTML = `<th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Destino</th><th>Estado</th><th>Fecha</th>${isAdmin ? '<th></th>' : ''}`;
+    }
     data.items.forEach(e => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td><span class="tracking-id">${e.tracking_id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino_provincia}, ${e.destino_ciudad}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td><td class="td-muted">${fmtFecha(e.fecha_creacion)}</td>`;
-      tr.onclick = () => { fromSearch = false; verDetalle(e.tracking_id); };
+      const deleteBtn = isAdmin
+        ? `<td><button class="btn btn-danger btn-sm" title="Eliminar envío" onclick="confirmarEliminar('${e.tracking_id}',event)">🗑</button></td>`
+        : '';
+      tr.innerHTML = `<td><span class="tracking-id">${e.tracking_id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino_provincia}, ${e.destino_ciudad}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td><td class="td-muted">${fmtFecha(e.fecha_creacion)}</td>${deleteBtn}`;
+      tr.onclick = (ev) => { if (ev.target.closest('button')) return; fromSearch = false; verDetalle(e.tracking_id); };
       tbody.appendChild(tr);
     });
     const total = data.total, totalPages = data.total_pages;
@@ -674,6 +845,43 @@ function resetForm() {
   document.getElementById('tracking-preview').textContent = 'LT-????-????';
 }
 
+function clearFieldError(inputId, errId) {
+  const el = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (el) el.classList.remove('error');
+  if (err) { err.textContent = ''; err.classList.remove('show'); }
+  if (!document.querySelector('#screen-alta .error')) {
+    const fe = document.getElementById('form-error');
+    if (fe) fe.style.display = 'none';
+  }
+}
+
+function setFieldError(inputId, errId, msg) {
+  const el = document.getElementById(inputId);
+  const err = document.getElementById(errId);
+  if (el) el.classList.add('error');
+  if (err) { err.textContent = msg; err.classList.add('show'); }
+}
+
+function validarNombre(val) {
+  if (!val || val.length < 3) return 'Mínimo 3 caracteres.';
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\.\,\-\/]+$/.test(val)) return 'Solo se permiten letras, números y puntuación básica.';
+  return null;
+}
+
+function validarDireccion(val) {
+  if (!val) return 'Campo obligatorio.';
+  if (!/\d/.test(val)) return 'Debe incluir un número (ej: Av. San Martín 1234).';
+  return null;
+}
+
+function validarTelefono(val) {
+  if (!val) return null; // opcional
+  if (!/^\+54 9 \d{2,4} \d{3,4}-\d{4}$/.test(val))
+    return 'Formato argentino requerido: +54 9 XX XXXX-XXXX';
+  return null;
+}
+
 async function crearEnvio() {
   const get = id => document.getElementById(id)?.value?.trim() || '';
   const rem = get('f-remitente'), dest = get('f-destinatario');
@@ -681,16 +889,56 @@ async function crearEnvio() {
   const origCiudad = get('f-origen-ciudad'), origCalle = get('f-origen-calle');
   const dst = document.getElementById('f-destino')?.value;
   const dstCiudad = get('f-destino-ciudad'), dstCalle = get('f-destino-calle');
-  // Validate
+  const tel = get('f-tel-destinatario');
+  const pesoStr = get('f-peso');
+  const tipo = document.getElementById('f-tipo')?.value;
+
   let hasError = false;
-  [['f-remitente', rem],['f-destinatario', dest],['f-origen-ciudad', origCiudad],['f-origen-calle', origCalle],['f-destino-ciudad', dstCiudad],['f-destino-calle', dstCalle]].forEach(([id, val]) => {
-    const el = document.getElementById(id); if (!val) { el?.classList.add('error'); hasError = true; } else el?.classList.remove('error');
-  });
-  [['f-origen', orig],['f-destino', dst]].forEach(([id, val]) => {
-    const el = document.getElementById(id); if (!val) { el?.classList.add('error'); hasError = true; } else el?.classList.remove('error');
-  });
+
+  // Nombres (letras, mín 3 chars)
+  let e;
+  e = validarNombre(rem);
+  if (e) { setFieldError('f-remitente','err-remitente', e); hasError = true; } else clearFieldError('f-remitente','err-remitente');
+
+  e = validarNombre(dest);
+  if (e) { setFieldError('f-destinatario','err-destinatario', e); hasError = true; } else clearFieldError('f-destinatario','err-destinatario');
+
+  // Provincias
+  if (!orig) { setFieldError('f-origen','err-origen','Seleccioná una provincia.'); hasError = true; } else clearFieldError('f-origen','err-origen');
+  if (!dst) { setFieldError('f-destino','err-destino','Seleccioná una provincia.'); hasError = true; } else clearFieldError('f-destino','err-destino');
+
+  // Ciudades
+  if (!origCiudad) { setFieldError('f-origen-ciudad','err-origen-ciudad','Campo obligatorio.'); hasError = true; } else clearFieldError('f-origen-ciudad','err-origen-ciudad');
+  if (!dstCiudad) { setFieldError('f-destino-ciudad','err-destino-ciudad','Campo obligatorio.'); hasError = true; } else clearFieldError('f-destino-ciudad','err-destino-ciudad');
+
+  // Direcciones (deben tener número)
+  e = validarDireccion(origCalle);
+  if (e) { setFieldError('f-origen-calle','err-origen-calle', e); hasError = true; } else clearFieldError('f-origen-calle','err-origen-calle');
+
+  e = validarDireccion(dstCalle);
+  if (e) { setFieldError('f-destino-calle','err-destino-calle', e); hasError = true; } else clearFieldError('f-destino-calle','err-destino-calle');
+
+  // Teléfono (opcional, pero si se llena debe ser válido)
+  e = validarTelefono(tel);
+  if (e) { setFieldError('f-tel-destinatario','err-tel', e); hasError = true; } else clearFieldError('f-tel-destinatario','err-tel');
+
+  // Coherencia tipo-peso
+  const peso = parseFloat(pesoStr) || null;
+  clearFieldError('f-peso','err-peso');
+  clearFieldError('f-tipo','err-tipo');
+
+  if (peso !== null) {
+    if (tipo === 'Sobre' && peso > 2) {
+      setFieldError('f-peso','err-peso','Un Sobre no puede superar 2 kg.'); hasError = true;
+    }
+    if (tipo === 'Pallet' && peso < 50) {
+      setFieldError('f-peso','err-peso','Un Pallet requiere mínimo 50 kg.'); hasError = true;
+    }
+  }
+
   if (hasError) { document.getElementById('form-error').style.display = 'block'; return; }
   document.getElementById('form-error').style.display = 'none';
+
   try {
     const envio = await api(`/api/envios?usuario=${loggedUser?.username || 'sistema'}`, {
       method: 'POST',
@@ -698,9 +946,9 @@ async function crearEnvio() {
         remitente: rem, destinatario: dest,
         origen_provincia: orig, origen_ciudad: origCiudad, origen_direccion: origCalle,
         destino_provincia: dst, destino_ciudad: dstCiudad, destino_direccion: dstCalle,
-        tel_destinatario: get('f-tel-destinatario'),
-        tipo_paquete: document.getElementById('f-tipo')?.value,
-        peso_kg: parseFloat(get('f-peso')) || null,
+        tel_destinatario: tel || null,
+        tipo_paquete: tipo,
+        peso_kg: peso,
         observaciones: get('f-obs'),
       }),
     });
@@ -713,6 +961,138 @@ async function crearEnvio() {
 }
 
 function closeModal() { document.getElementById('success-modal').classList.remove('show'); }
+
+// ── Eliminar envío ────────────────────────────────────────────────────────────
+let pendingDeleteId = null;
+
+function confirmarEliminar(tracking_id, ev) {
+  if (ev) ev.stopPropagation();
+  pendingDeleteId = tracking_id;
+  document.getElementById('confirm-delete-id').textContent = tracking_id;
+  document.getElementById('confirm-delete-modal').classList.add('show');
+}
+
+async function ejecutarEliminar() {
+  if (!pendingDeleteId) return;
+  document.getElementById('confirm-delete-modal').classList.remove('show');
+  try {
+    await api(`/api/envios/${pendingDeleteId}`, { method: 'DELETE' });
+    pendingDeleteId = null;
+    showScreen('listado');
+  } catch (err) {
+    alert('Error al eliminar: ' + err.message);
+  }
+}
+
+// ── Editar envío ──────────────────────────────────────────────────────────────
+function abrirEditarEnvio() {
+  const e = currentDetalle;
+  if (!e) return;
+  document.getElementById('edit-modal-tracking').textContent = e.tracking_id;
+  document.getElementById('edit-remitente').value = e.remitente || '';
+  document.getElementById('edit-destinatario').value = e.destinatario || '';
+
+  // Provincia origen
+  const selOrig = document.getElementById('edit-origen');
+  Array.from(selOrig.options).forEach(o => { o.selected = o.value === e.origen_provincia; });
+  document.getElementById('edit-origen-ciudad').value = e.origen_ciudad || '';
+  document.getElementById('edit-origen-calle').value = e.origen_direccion || '';
+
+  // Provincia destino
+  const selDest = document.getElementById('edit-destino');
+  Array.from(selDest.options).forEach(o => { o.selected = o.value === e.destino_provincia; });
+  document.getElementById('edit-destino-ciudad').value = e.destino_ciudad || '';
+  document.getElementById('edit-destino-calle').value = e.destino_direccion || '';
+
+  document.getElementById('edit-tel').value = e.tel_destinatario || '';
+  document.getElementById('edit-peso').value = e.peso_kg !== null && e.peso_kg !== undefined ? e.peso_kg : '';
+
+  const selTipo = document.getElementById('edit-tipo');
+  Array.from(selTipo.options).forEach(o => { o.selected = o.value === e.tipo_paquete; });
+  document.getElementById('edit-obs').value = e.observaciones || '';
+
+  // Limpiar errores
+  ['edit-remitente','edit-destinatario','edit-origen','edit-origen-ciudad','edit-origen-calle',
+   'edit-destino','edit-destino-ciudad','edit-destino-calle','edit-tel','edit-peso','edit-tipo'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('error');
+  });
+  ['err-edit-remitente','err-edit-destinatario','err-edit-origen','err-edit-origen-ciudad','err-edit-origen-calle',
+   'err-edit-destino','err-edit-destino-ciudad','err-edit-destino-calle','err-edit-tel','err-edit-peso','err-edit-tipo'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.textContent=''; el.classList.remove('show'); }
+  });
+
+  document.getElementById('edit-error').style.display = 'none';
+  document.getElementById('edit-envio-modal').classList.add('show');
+}
+
+async function guardarEdicion() {
+  const get = id => document.getElementById(id)?.value?.trim() || '';
+  const rem = get('edit-remitente');
+  const dest = get('edit-destinatario');
+  const orig = document.getElementById('edit-origen')?.value;
+  const origCiudad = get('edit-origen-ciudad');
+  const origCalle = get('edit-origen-calle');
+  const dst = document.getElementById('edit-destino')?.value;
+  const dstCiudad = get('edit-destino-ciudad');
+  const dstCalle = get('edit-destino-calle');
+  const tel = get('edit-tel');
+  const pesoStr = get('edit-peso');
+  const tipo = document.getElementById('edit-tipo')?.value;
+
+  let hasError = false;
+  let err;
+
+  err = validarNombre(rem);
+  if (err) { setFieldError('edit-remitente','err-edit-remitente',err); hasError = true; }
+
+  err = validarNombre(dest);
+  if (err) { setFieldError('edit-destinatario','err-edit-destinatario',err); hasError = true; }
+
+  if (!orig) { setFieldError('edit-origen','err-edit-origen','Seleccioná una provincia.'); hasError = true; }
+  if (!dst) { setFieldError('edit-destino','err-edit-destino','Seleccioná una provincia.'); hasError = true; }
+
+  if (!origCiudad) { setFieldError('edit-origen-ciudad','err-edit-origen-ciudad','Campo obligatorio.'); hasError = true; }
+  if (!dstCiudad) { setFieldError('edit-destino-ciudad','err-edit-destino-ciudad','Campo obligatorio.'); hasError = true; }
+
+  err = validarDireccion(origCalle);
+  if (err) { setFieldError('edit-origen-calle','err-edit-origen-calle',err); hasError = true; }
+
+  err = validarDireccion(dstCalle);
+  if (err) { setFieldError('edit-destino-calle','err-edit-destino-calle',err); hasError = true; }
+
+  err = validarTelefono(tel);
+  if (err) { setFieldError('edit-tel','err-edit-tel',err); hasError = true; }
+
+  const peso = parseFloat(pesoStr) || null;
+  if (peso !== null) {
+    if (tipo === 'Sobre' && peso > 2) { setFieldError('edit-peso','err-edit-peso','Un Sobre no puede superar 2 kg.'); hasError = true; }
+    if (tipo === 'Pallet' && peso < 50) { setFieldError('edit-peso','err-edit-peso','Un Pallet requiere mínimo 50 kg.'); hasError = true; }
+  }
+
+  if (hasError) { document.getElementById('edit-error').style.display = 'block'; return; }
+  document.getElementById('edit-error').style.display = 'none';
+
+  try {
+    const tracking_id = currentDetalle.tracking_id;
+    await api(`/api/envios/${tracking_id}?usuario=${loggedUser?.username || 'sistema'}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        remitente: rem, destinatario: dest,
+        origen_provincia: orig, origen_ciudad: origCiudad, origen_direccion: origCalle,
+        destino_provincia: dst, destino_ciudad: dstCiudad, destino_direccion: dstCalle,
+        tel_destinatario: tel || null,
+        tipo_paquete: tipo,
+        peso_kg: peso,
+        observaciones: get('edit-obs'),
+      }),
+    });
+    document.getElementById('edit-envio-modal').classList.remove('show');
+    verDetalle(tracking_id);
+  } catch (err) {
+    document.getElementById('edit-error').textContent = '⚠ ' + err.message;
+    document.getElementById('edit-error').style.display = 'block';
+  }
+}
 
 // ── Búsqueda ──────────────────────────────────────────────────────────────────
 function renderSearchInit() {
@@ -759,6 +1139,8 @@ async function buscar() {
 function clearSearch() { renderSearchInit(); }
 
 // ── Detalle ───────────────────────────────────────────────────────────────────
+let currentDetalle = null;
+
 async function verDetalle(tracking_id) {
   showScreen('detalle');
   document.getElementById('detalle-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Cargando...</div>';
@@ -767,6 +1149,7 @@ async function verDetalle(tracking_id) {
   backBtn.onclick = () => showScreen(fromSearch ? 'busqueda' : 'listado');
   try {
     const e = await api(`/api/envios/${tracking_id}`);
+    currentDetalle = e;
     const ESTADOS = ['Creado', 'En Preparación', 'En Tránsito', 'Entregado'];
     const ci = ESTADOS.indexOf(e.estado);
     const isSup = currentRole === 'Supervisor';
@@ -802,7 +1185,11 @@ async function verDetalle(tracking_id) {
     document.getElementById('detalle-content').innerHTML = `
       <div class="detail-header">
         <div><div style="font-size:12px;color:var(--text-dim);font-family:var(--mono);margin-bottom:6px">TRACKING ID</div><div class="detail-tracking">${e.tracking_id}</div></div>
-        <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
+          ${(currentRole === 'Operador' || currentRole === 'Administrador') && e.estado === 'Creado' ? `<button class="btn btn-ghost btn-sm" onclick="abrirEditarEnvio()">✏ Editar</button>` : ''}
+          ${currentRole === 'Administrador' ? `<button class="btn btn-danger btn-sm" onclick="confirmarEliminar('${e.tracking_id}')">🗑 Eliminar</button>` : ''}
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
         <div>
@@ -899,7 +1286,12 @@ async function renderUsuarios() {
 
 function showNuevoUsuarioForm() {
   if (currentRole !== 'Administrador') return;
-  ['nu-nombre','nu-username'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['nu-nombre','nu-username','nu-password','nu-password2'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.value = ''; el.classList.remove('error'); }
+  });
+  ['err-nu-nombre','err-nu-username','err-nu-rol','err-nu-password','err-nu-password2'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.textContent = ''; el.classList.remove('show'); }
+  });
   document.getElementById('nu-rol').selectedIndex = 0;
   document.getElementById('nu-activo').selectedIndex = 0;
   document.getElementById('nu-error').style.display = 'none';
@@ -910,11 +1302,53 @@ async function crearUsuario() {
   const nombre = document.getElementById('nu-nombre').value.trim();
   const username = document.getElementById('nu-username').value.trim();
   const rol = document.getElementById('nu-rol').value;
-  if (!nombre || !username || !rol) { document.getElementById('nu-error').style.display = 'block'; return; }
+  const password = document.getElementById('nu-password').value;
+  const password2 = document.getElementById('nu-password2').value;
+
+  // Limpiar errores previos
+  ['nu-nombre','nu-username','nu-rol','nu-password','nu-password2'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('error');
+  });
+  ['err-nu-nombre','err-nu-username','err-nu-rol','err-nu-password','err-nu-password2'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.textContent = ''; el.classList.remove('show'); }
+  });
+
   document.getElementById('nu-error').style.display = 'none';
+
+  let hasError = false;
+
+  if (!nombre) {
+    document.getElementById('nu-nombre').classList.add('error');
+    const e = document.getElementById('err-nu-nombre'); if (e) { e.textContent = 'Campo obligatorio.'; e.classList.add('show'); }
+    hasError = true;
+  }
+  if (!username) {
+    document.getElementById('nu-username').classList.add('error');
+    const e = document.getElementById('err-nu-username'); if (e) { e.textContent = 'Campo obligatorio.'; e.classList.add('show'); }
+    hasError = true;
+  }
+  if (!rol) {
+    document.getElementById('nu-rol').classList.add('error');
+    const e = document.getElementById('err-nu-rol'); if (e) { e.textContent = 'Seleccioná un rol.'; e.classList.add('show'); }
+    hasError = true;
+  }
+  if (!password || password.length < 8) {
+    document.getElementById('nu-password').classList.add('error');
+    const e = document.getElementById('err-nu-password'); if (e) { e.textContent = 'Mínimo 8 caracteres.'; e.classList.add('show'); }
+    hasError = true;
+  }
+  if (password !== password2) {
+    document.getElementById('nu-password2').classList.add('error');
+    const e = document.getElementById('err-nu-password2'); if (e) { e.textContent = 'Las contraseñas no coinciden.'; e.classList.add('show'); }
+    hasError = true;
+  }
+
+  if (hasError) { document.getElementById('nu-error').style.display = 'block'; return; }
+
   const activo = document.getElementById('nu-activo').value === 'true';
+
   try {
-    await api('/api/usuarios', { method: 'POST', body: JSON.stringify({ username, nombre, rol, activo }) });
+    await api('/api/usuarios', { method: 'POST', body: JSON.stringify({ username, nombre, rol, activo, password }) });
     document.getElementById('nuevo-usuario-form').style.display = 'none';
     renderUsuarios();
   } catch (err) {
@@ -973,6 +1407,9 @@ async function doLogin() {
     document.getElementById('role-badge').textContent = data.rol.toUpperCase();
     document.getElementById('user-avatar').textContent = data.initials;
     document.getElementById('login-error').classList.remove('show');
+    // Mostrar/ocultar Carga Lote según rol
+    const bulkLink = document.getElementById('nav-bulk-link');
+    if (bulkLink) bulkLink.style.display = data.rol === 'Administrador' ? '' : 'none';
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-nav').style.display = 'flex';
     document.getElementById('app-content').style.display = 'block';
@@ -1066,7 +1503,6 @@ async function actualizarBulkStats() {
 
 </script>
 
-<!-- IA SCREEN -->
 <script>
 // Inject IA screen into app-content
 document.getElementById('app-content').insertAdjacentHTML('beforeend', `
@@ -1077,7 +1513,6 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
       <p style="font-size:13px;color:var(--text-muted)">Modelo de Machine Learning entrenado con datos históricos de envíos de LogiTrack</p>
     </div>
 
-    <!-- Model metrics card -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
       <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Métricas del modelo (última versión)</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
@@ -1100,7 +1535,6 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
       </div>
     </div>
 
-    <!-- Predictor -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px">
       <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Simular predicción</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -1138,7 +1572,6 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
       </div>
       <button onclick="predecir()" style="background:#4ade80;color:#000;border:none;border-radius:8px;padding:10px 24px;font-weight:700;font-size:14px;cursor:pointer;width:100%">🔍 Predecir demora</button>
 
-      <!-- Result -->
       <div id="ia-resultado" style="display:none;margin-top:16px;border-radius:10px;padding:16px 20px">
         <div style="display:flex;align-items:center;gap:12px">
           <div id="ia-icono" style="font-size:32px"></div>
@@ -1154,7 +1587,6 @@ document.getElementById('app-content').insertAdjacentHTML('beforeend', `
       </div>
     </div>
 
-    <!-- Feature importance -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
       <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">Variables más influyentes en el modelo</div>
       <div style="display:flex;flex-direction:column;gap:10px">

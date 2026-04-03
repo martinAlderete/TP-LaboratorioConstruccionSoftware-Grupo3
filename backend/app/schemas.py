@@ -47,6 +47,21 @@ class EnvioCreate(BaseModel):
     observaciones: Optional[str] = None
 
 
+class EnvioUpdate(BaseModel):
+    remitente: Optional[str] = None
+    destinatario: Optional[str] = None
+    origen_provincia: Optional[str] = None
+    origen_ciudad: Optional[str] = None
+    origen_direccion: Optional[str] = None
+    destino_provincia: Optional[str] = None
+    destino_ciudad: Optional[str] = None
+    destino_direccion: Optional[str] = None
+    tel_destinatario: Optional[str] = None
+    tipo_paquete: Optional[str] = None
+    peso_kg: Optional[float] = None
+    observaciones: Optional[str] = None
+
+
 class EnvioOut(BaseModel):
     tracking_id: str
     remitente: str
