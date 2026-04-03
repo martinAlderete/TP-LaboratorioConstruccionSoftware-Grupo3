@@ -61,8 +61,7 @@ class Envio(Base):
     creado_por = Column(String, ForeignKey("usuarios.username"), nullable=True)
 
     creador = relationship("Usuario", back_populates="envios_creados")
- 
-    historial = relationship("EventoTracking", back_populates="envio", order_by="EventoTracking.timestamp", cascade="all, delete-orphan")
+    historial = relationship("EventoTracking", back_populates="envio", order_by="EventoTracking.timestamp")
 
 
 class EventoTracking(Base):
