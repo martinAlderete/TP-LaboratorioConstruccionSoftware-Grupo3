@@ -1,6 +1,56 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 from typing import Optional, List
 from datetime import datetime
+
+
+def _validar_nombre(valor: Optional[str], campo: str) -> Optional[str]:
+    if valor is None:
+        return valor
+    valor = valor.strip()
+    if len(valor) < 3:
+        raise ValueError(f"{campo}: mínimo 3 caracteres")
+
+    import re
+    if not re.fullmatch(r"[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+", valor):
+        raise ValueError(f"{campo}: solo se permiten letras y espacios")
+    return valor
+
+
+def _validar_direccion(valor: Optional[str], campo: str) -> Optional[str]:
+    if valor is None:
+        return valor
+    valor = valor.strip()
+    if not valor:
+        raise ValueError(f"{campo}: campo obligatorio")
+
+    import re
+    if not re.search(r"\d", valor):
+        raise ValueError(f"{campo}: debe incluir un número")
+    return valor
+
+
+def _validar_telefono(valor: Optional[str]) -> Optional[str]:
+    if valor is None:
+        return valor
+    valor = valor.strip()
+    if not valor:
+        return None
+
+    import re
+    if not re.fullmatch(r"\+54 9 \d{2,4} \d{3,4}-\d{4}", valor):
+        raise ValueError("tel_destinatario: formato argentino requerido (+54 9 XX XXXX-XXXX)")
+    return valor
+
+
+def _validar_tipo_peso(tipo_paquete: Optional[str], peso_kg: Optional[float]) -> None:
+    if peso_kg is None:
+        return
+
+    if tipo_paquete == "Sobre" and peso_kg > 2:
+        raise ValueError("Un Sobre no puede superar 2 kg")
+
+    if tipo_paquete == "Pallet" and peso_kg < 50:
+        raise ValueError("Un Pallet requiere mínimo 50 kg")
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -46,6 +96,26 @@ class EnvioCreate(BaseModel):
     peso_kg: Optional[float] = None
     observaciones: Optional[str] = None
 
+    @field_validator("remitente", "destinatario")
+    @classmethod
+    def validar_nombres(cls, value, info):
+        return _validar_nombre(value, info.field_name)
+
+    @field_validator("origen_direccion", "destino_direccion")
+    @classmethod
+    def validar_direcciones(cls, value, info):
+        return _validar_direccion(value, info.field_name)
+
+    @field_validator("tel_destinatario")
+    @classmethod
+    def validar_telefono(cls, value):
+        return _validar_telefono(value)
+
+    @model_validator(mode="after")
+    def validar_peso_tipo(self):
+        _validar_tipo_peso(self.tipo_paquete, self.peso_kg)
+        return self
+
 
 class EnvioUpdate(BaseModel):
     remitente: Optional[str] = None
@@ -61,6 +131,25 @@ class EnvioUpdate(BaseModel):
     peso_kg: Optional[float] = None
     observaciones: Optional[str] = None
 
+    @field_validator("remitente", "destinatario")
+    @classmethod
+    def validar_nombres(cls, value, info):
+        return _validar_nombre(value, info.field_name)
+
+    @field_validator("origen_direccion", "destino_direccion")
+    @classmethod
+    def validar_direcciones(cls, value, info):
+        return _validar_direccion(value, info.field_name)
+
+    @field_validator("tel_destinatario")
+    @classmethod
+    def validar_telefono(cls, value):
+        return _validar_telefono(value)
+
+    @model_validator(mode="after")
+    def validar_peso_tipo(self):
+        _validar_tipo_peso(self.tipo_paquete, self.peso_kg)
+        return self
 
 class EnvioOut(BaseModel):
     tracking_id: str
