@@ -330,70 +330,66 @@
   <div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
     <div class="card">
       <div class="card-title">Datos del Envío</div>
-      <div class="form-grid">
+      <form id="form-nuevo-envio" class="form-grid" onsubmit="event.preventDefault(); crearEnvio();">
         <div class="form-group">
           <label>Nombre Remitente *</label>
-          <input type="text" id="f-remitente" placeholder="Ej: Distribuidora Palermo S.A." oninput="clearFieldError('f-remitente','err-remitente')">
-          <span class="field-error" id="err-remitente"></span>
+          <input type="text" id="f-remitente" placeholder="Ej: Distribuidora Palermo S.A." required minlength="3" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\.\,\-\/]+" title="Mínimo 3 caracteres. Letras y números.">
         </div>
         <div class="form-group">
           <label>Nombre Destinatario *</label>
-          <input type="text" id="f-destinatario" placeholder="Ej: Juan García" oninput="clearFieldError('f-destinatario','err-destinatario')">
-          <span class="field-error" id="err-destinatario"></span>
+          <input type="text" id="f-destinatario" placeholder="Ej: Juan García" required minlength="3" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s\.\,\-\/]+" title="Mínimo 3 caracteres. Letras y números.">
         </div>
         <div class="form-group">
           <label>Provincia de Origen *</label>
-          <select id="f-origen" onchange="clearFieldError('f-origen','err-origen')">
+          <select id="f-origen" required>
             <option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
           </select>
-          <span class="field-error" id="err-origen"></span>
         </div>
         <div class="form-group">
           <label>Ciudad de Origen *</label>
-          <input type="text" id="f-origen-ciudad" placeholder="Ej: Rosario" oninput="clearFieldError('f-origen-ciudad','err-origen-ciudad')">
-          <span class="field-error" id="err-origen-ciudad"></span>
+          <input type="text" id="f-origen-ciudad" placeholder="Ej: Rosario" required minlength="2">
         </div>
         <div class="form-group">
           <label>Calle y número de Origen *</label>
-          <input type="text" id="f-origen-calle" placeholder="Ej: Av. Pellegrini 1234" oninput="clearFieldError('f-origen-calle','err-origen-calle')">
-          <span class="field-error" id="err-origen-calle"></span>
+          <input type="text" id="f-origen-calle" placeholder="Ej: Av. Pellegrini 1234" required pattern=".*\d+.*" title="Debe incluir la calle y un número">
         </div>
         <div class="form-group">
           <label>Provincia de Destino *</label>
-          <select id="f-destino" onchange="clearFieldError('f-destino','err-destino')">
+          <select id="f-destino" required>
             <option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
           </select>
-          <span class="field-error" id="err-destino"></span>
         </div>
         <div class="form-group">
           <label>Ciudad de Destino *</label>
-          <input type="text" id="f-destino-ciudad" placeholder="Ej: Mendoza" oninput="clearFieldError('f-destino-ciudad','err-destino-ciudad')">
-          <span class="field-error" id="err-destino-ciudad"></span>
+          <input type="text" id="f-destino-ciudad" placeholder="Ej: Mendoza" required minlength="2">
         </div>
         <div class="form-group">
           <label>Calle y número de Destino *</label>
-          <input type="text" id="f-destino-calle" placeholder="Ej: San Martín 456, Piso 2" oninput="clearFieldError('f-destino-calle','err-destino-calle')">
-          <span class="field-error" id="err-destino-calle"></span>
+          <input type="text" id="f-destino-calle" placeholder="Ej: San Martín 456, Piso 2" required pattern=".*\d+.*" title="Debe incluir la calle y un número">
         </div>
         <div class="form-group">
           <label>Teléfono del Destinatario <span style="color:var(--text-dim);font-size:11px;text-transform:none;letter-spacing:0">(opcional)</span></label>
-          <input type="text" id="f-tel-destinatario" placeholder="Ej: +54 9 261 555-1234" oninput="clearFieldError('f-tel-destinatario','err-tel')">
-          <span class="field-error" id="err-tel"></span>
+          <input type="tel" id="f-tel-destinatario" placeholder="Ej: +54 9 261 555-1234">
         </div>
         <div class="form-group">
-          <label>Peso (kg)</label>
-          <input type="number" id="f-peso" placeholder="0.0" min="0" step="0.1" oninput="clearFieldError('f-peso','err-peso')">
-          <span class="field-error" id="err-peso"></span>
+          <label>Peso (kg) *</label>
+          <input type="number" id="f-peso" placeholder="0.0" min="0.1" step="0.1" required>
         </div>
         <div class="form-group">
-          <label>Tipo de Paquete</label>
-          <select id="f-tipo" onchange="clearFieldError('f-tipo','err-tipo')">
-            <option>Caja estándar</option><option>Sobre</option><option>Pallet</option><option>Frágil</option><option>Refrigerado</option>
+          <label>Tipo de Paquete *</label>
+          <select id="f-tipo" required>
+            <option value="Caja estándar">Caja estándar</option><option value="Sobre">Sobre</option><option value="Pallet">Pallet</option><option value="Frágil">Frágil</option><option value="Refrigerado">Refrigerado</option>
           </select>
-          <span class="field-error" id="err-tipo"></span>
         </div>
         <div class="form-group full"><label>Observaciones</label><textarea id="f-obs" placeholder="Instrucciones especiales, referencias de entrega, etc."></textarea></div>
-      </div>
+        
+        <div id="form-error" class="form-group full" style="display:none;color:var(--danger);font-size:13px;padding:10px;background:rgba(240,80,64,0.08);border:1px solid rgba(240,80,64,0.25);border-radius:6px;"></div>
+
+        <div class="form-actions full" style="grid-column: 1 / -1; display:flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+          <button type="button" class="btn btn-ghost" onclick="showScreen('listado')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Registrar Envío →</button>
+        </div>
+      </form>
       <div id="form-error" style="display:none;color:var(--danger);font-size:13px;margin-top:12px;padding:10px 14px;background:rgba(240,80,64,0.08);border-radius:6px;border:1px solid rgba(240,80,64,0.25);">⚠ Completá todos los campos marcados en rojo.</div>
       <div class="form-actions">
         <button class="btn btn-ghost" onclick="showScreen('listado')">Cancelar</button>
@@ -884,77 +880,49 @@ function validarTelefono(val) {
 
 async function crearEnvio() {
   const get = id => document.getElementById(id)?.value?.trim() || '';
-  const rem = get('f-remitente'), dest = get('f-destinatario');
-  const orig = document.getElementById('f-origen')?.value;
-  const origCiudad = get('f-origen-ciudad'), origCalle = get('f-origen-calle');
-  const dst = document.getElementById('f-destino')?.value;
-  const dstCiudad = get('f-destino-ciudad'), dstCalle = get('f-destino-calle');
-  const tel = get('f-tel-destinatario');
-  const pesoStr = get('f-peso');
-  const tipo = document.getElementById('f-tipo')?.value;
+  
+  const tipo = document.getElementById('f-tipo').value;
+  const peso = parseFloat(get('f-peso'));
+  const errorDiv = document.getElementById('form-error');
+  
+  errorDiv.style.display = 'none';
 
-  let hasError = false;
-
-  // Nombres (letras, mín 3 chars)
-  let e;
-  e = validarNombre(rem);
-  if (e) { setFieldError('f-remitente','err-remitente', e); hasError = true; } else clearFieldError('f-remitente','err-remitente');
-
-  e = validarNombre(dest);
-  if (e) { setFieldError('f-destinatario','err-destinatario', e); hasError = true; } else clearFieldError('f-destinatario','err-destinatario');
-
-  // Provincias
-  if (!orig) { setFieldError('f-origen','err-origen','Seleccioná una provincia.'); hasError = true; } else clearFieldError('f-origen','err-origen');
-  if (!dst) { setFieldError('f-destino','err-destino','Seleccioná una provincia.'); hasError = true; } else clearFieldError('f-destino','err-destino');
-
-  // Ciudades
-  if (!origCiudad) { setFieldError('f-origen-ciudad','err-origen-ciudad','Campo obligatorio.'); hasError = true; } else clearFieldError('f-origen-ciudad','err-origen-ciudad');
-  if (!dstCiudad) { setFieldError('f-destino-ciudad','err-destino-ciudad','Campo obligatorio.'); hasError = true; } else clearFieldError('f-destino-ciudad','err-destino-ciudad');
-
-  // Direcciones (deben tener número)
-  e = validarDireccion(origCalle);
-  if (e) { setFieldError('f-origen-calle','err-origen-calle', e); hasError = true; } else clearFieldError('f-origen-calle','err-origen-calle');
-
-  e = validarDireccion(dstCalle);
-  if (e) { setFieldError('f-destino-calle','err-destino-calle', e); hasError = true; } else clearFieldError('f-destino-calle','err-destino-calle');
-
-  // Teléfono (opcional, pero si se llena debe ser válido)
-  e = validarTelefono(tel);
-  if (e) { setFieldError('f-tel-destinatario','err-tel', e); hasError = true; } else clearFieldError('f-tel-destinatario','err-tel');
-
-  // Coherencia tipo-peso
-  const peso = parseFloat(pesoStr) || null;
-  clearFieldError('f-peso','err-peso');
-  clearFieldError('f-tipo','err-tipo');
-
-  if (peso !== null) {
-    if (tipo === 'Sobre' && peso > 2) {
-      setFieldError('f-peso','err-peso','Un Sobre no puede superar 2 kg.'); hasError = true;
-    }
-    if (tipo === 'Pallet' && peso < 50) {
-      setFieldError('f-peso','err-peso','Un Pallet requiere mínimo 50 kg.'); hasError = true;
-    }
+  // Validaciones lógicas cruzadas
+  if (tipo === 'Sobre' && peso > 2) {
+    errorDiv.textContent = '⚠ Un paquete de tipo "Sobre" no puede pesar más de 2 kg.';
+    errorDiv.style.display = 'block';
+    return;
   }
-
-  if (hasError) { document.getElementById('form-error').style.display = 'block'; return; }
-  document.getElementById('form-error').style.display = 'none';
+  if (tipo === 'Pallet' && peso < 50) {
+    errorDiv.textContent = '⚠ Un paquete de tipo "Pallet" requiere un peso mínimo de 50 kg.';
+    errorDiv.style.display = 'block';
+    return;
+  }
 
   try {
     const envio = await api(`/api/envios?usuario=${loggedUser?.username || 'sistema'}`, {
       method: 'POST',
       body: JSON.stringify({
-        remitente: rem, destinatario: dest,
-        origen_provincia: orig, origen_ciudad: origCiudad, origen_direccion: origCalle,
-        destino_provincia: dst, destino_ciudad: dstCiudad, destino_direccion: dstCalle,
-        tel_destinatario: tel || null,
+        remitente: get('f-remitente'), 
+        destinatario: get('f-destinatario'),
+        origen_provincia: document.getElementById('f-origen').value, 
+        origen_ciudad: get('f-origen-ciudad'), 
+        origen_direccion: get('f-origen-calle'),
+        destino_provincia: document.getElementById('f-destino').value, 
+        destino_ciudad: get('f-destino-ciudad'), 
+        destino_direccion: get('f-destino-calle'),
+        tel_destinatario: get('f-tel-destinatario') || null,
         tipo_paquete: tipo,
         peso_kg: peso,
         observaciones: get('f-obs'),
       }),
     });
+    
     lastCreated = envio.tracking_id;
     document.getElementById('modal-tracking-id').textContent = envio.tracking_id;
     document.getElementById('success-modal').classList.add('show');
+    document.getElementById('form-nuevo-envio').reset(); // Limpia el formulario tras el éxito
+    
   } catch (err) {
     alert('Error al crear envío: ' + err.message);
   }
