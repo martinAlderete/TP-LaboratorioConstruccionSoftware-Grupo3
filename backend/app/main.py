@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 from app.database import engine, Base
-from app.routers import envios, usuarios, arco, prediccion   
-from app.ml.predictor import cargar_modelo                  
+from app.routers import envios, usuarios, arco, prediccion
+from app.ml.predictor import cargar_modelo
 from app import seed
 
 
@@ -11,6 +14,25 @@ app = FastAPI(
     description="Sistema Federal de Gestión de Logística y Distribución — UNGS 1C2026",
     version="1.0.0",
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errores = []
+
+    for e in exc.errors():
+        campo = e["loc"][-1]
+        mensaje = e["msg"]
+        errores.append(f"{campo}: {mensaje}")
+
+    return JSONResponse(
+        status_code=400,
+        content={
+            "ResponseStatus": 400,
+            "ResponseDescription": " | ".join(errores),
+            "ResponseObject": None
+        },
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
