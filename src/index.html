@@ -455,9 +455,9 @@
 </div>
     <div id="search-results-count" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
     <table>
-      <thead><tr><th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Origen</th><th>Destino</th><th>Estado</th></tr></thead>
-      <tbody id="search-tbody"></tbody>
-    </table>
+  <thead><tr><th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Origen</th><th>Destino</th><th>Estado</th><th>Fecha</th></tr></thead>
+  <tbody id="search-tbody"></tbody>
+</table>
     <div id="empty-busqueda" class="empty-state">
       <div class="empty-icon">🔍</div>
       <div>Ingresá un término para buscar</div>
@@ -1255,7 +1255,7 @@ async function buscar() {
       empty.style.display = 'none';
       results.forEach(e => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td><span class="tracking-id">${e.tracking_id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino_provincia}</td><td class="td-muted">${e.destino_ciudad}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td>`;
+        tr.innerHTML = `<td><span class="tracking-id">${e.tracking_id}</span></td><td>${e.remitente}</td><td>${e.destinatario}</td><td class="td-muted">${e.destino_provincia}</td><td class="td-muted">${e.destino_ciudad}</td><td><span class="badge ${badgeClass(e.estado)}">${e.estado.toUpperCase()}</span></td><td class="td-muted">${fmtFecha(e.fecha_creacion)}</td>`;
         tr.onclick = () => { fromSearch = true; verDetalle(e.tracking_id); };
         tbody.appendChild(tr);
       });
