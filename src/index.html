@@ -972,9 +972,13 @@ function validarDireccion(val) {
 
   if (limpio.length < 5) return 'Ingresá una dirección válida.';
 
-  // Debe tener letras y al menos un número
-  if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/.test(limpio) || !/\d/.test(limpio)) {
-    return 'Formato requerido: nombre de la calle y número. Ej: Sargento Roca 1413';
+  // Debe comenzar con letras y terminar con número
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/.test(limpio)) {
+    return 'La dirección debe comenzar con el nombre de la calle. Ej: Perón 1415';
+  }
+
+  if (!/\d+$/.test(limpio.replace(/\s+/g, ' ').trim())) {
+    return 'La dirección debe terminar con el número. Ej: Perón 1415';
   }
 
   return null;
