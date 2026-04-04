@@ -214,6 +214,12 @@
   .confirm-modal { background: var(--surface); border: 1px solid rgba(240,80,64,0.4); border-radius: 12px; padding: 36px; max-width: 420px; width: 90%; text-align: center; }
   .confirm-modal h3 { font-family: var(--display); font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--danger); }
   .confirm-modal p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+
+  @media print {
+  body * { visibility: hidden; }
+  #etiqueta-print, #etiqueta-print * { visibility: visible; }
+  #etiqueta-print { position: fixed; left: 0; top: 0; width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -346,7 +352,7 @@
         </div>
         <div class="form-group">
           <label>Provincia de Origen *</label>
-          <select id="f-origen" onchange="clearFieldError('f-origen','err-origen')">
+         <select id="f-origen" onchange="clearFieldError('f-origen','err-origen');_dispararPrediccion()">
             <option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
           </select>
           <span class="field-error" id="err-origen"></span>
@@ -363,7 +369,7 @@
         </div>
         <div class="form-group">
           <label>Provincia de Destino *</label>
-          <select id="f-destino" onchange="clearFieldError('f-destino','err-destino')">
+         <select id="f-destino" onchange="clearFieldError('f-destino','err-destino');_dispararPrediccion()">
             <option value="">— Seleccionar provincia —</option><option>Buenos Aires</option><option>CABA</option><option>Córdoba</option><option>Santa Fe</option><option>Mendoza</option><option>Tucumán</option><option>Salta</option><option>Neuquén</option><option>Entre Ríos</option><option>Misiones</option><option>Chaco</option><option>Corrientes</option><option>Santiago del Estero</option><option>San Juan</option><option>Jujuy</option><option>Río Negro</option><option>Formosa</option><option>Chubut</option><option>San Luis</option><option>Catamarca</option><option>La Rioja</option><option>La Pampa</option><option>Santa Cruz</option><option>Tierra del Fuego</option>
           </select>
           <span class="field-error" id="err-destino"></span>
@@ -385,12 +391,12 @@
         </div>
         <div class="form-group">
           <label>Peso (kg)</label>
-          <input type="number" id="f-peso" placeholder="0.0" min="0" step="0.1" oninput="clearFieldError('f-peso','err-peso')">
+         <input type="number" id="f-peso" placeholder="0.0" min="0" step="0.1" oninput="clearFieldError('f-peso','err-peso');_dispararPrediccion()">
           <span class="field-error" id="err-peso"></span>
         </div>
         <div class="form-group">
           <label>Tipo de Paquete</label>
-          <select id="f-tipo" onchange="clearFieldError('f-tipo','err-tipo')">
+         <select id="f-tipo" onchange="clearFieldError('f-tipo','err-tipo');_dispararPrediccion()">
             <option>Caja estándar</option><option>Sobre</option><option>Pallet</option><option>Frágil</option><option>Refrigerado</option>
           </select>
           <span class="field-error" id="err-tipo"></span>
@@ -418,6 +424,10 @@
       <div class="card">
         <div class="card-title">Ley 25.326</div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.7">Los datos personales serán tratados únicamente para la gestión del envío, en cumplimiento de la Ley de Protección de Datos Personales.</div>
+      </div>
+      <div class="card" id="card-prediccion" style="display:none">
+        <div class="card-title">🧠 Predicción IA</div>
+        <div id="prediccion-resultado" style="font-size:13px"></div>
       </div>
     </div>
   </div>
@@ -733,6 +743,53 @@
   </div>
 </div>
 
+<div id="etiqueta-print" style="display:none;font-family:var(--mono);padding:32px;border:2px solid #000;max-width:500px">
+  <div style="font-size:24px;font-weight:800;margin-bottom:8px">⬡ LogiTrack</div>
+  <div style="font-size:11px;margin-bottom:16px;border-bottom:1px solid #000;padding-bottom:12px">Sistema Federal de Gestión de Logística y Distribución</div>
+  <div style="font-size:13px;margin-bottom:4px;color:#555">TRACKING ID</div>
+  <div id="print-tracking" style="font-size:28px;font-weight:800;letter-spacing:3px;margin-bottom:16px"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div>
+      <div style="font-size:11px;color:#555;margin-bottom:2px">REMITENTE</div>
+      <div id="print-remitente" style="font-size:13px;font-weight:600"></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#555;margin-bottom:2px">DESTINATARIO</div>
+      <div id="print-destinatario" style="font-size:13px;font-weight:600"></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#555;margin-bottom:2px">ORIGEN</div>
+      <div id="print-origen" style="font-size:13px"></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#555;margin-bottom:2px">DESTINO</div>
+      <div id="print-destino" style="font-size:13px"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:12px;border-top:1px solid #000">
+    <div>
+      <div style="font-size:11px;color:#555;margin-bottom:2px">TIPO</div>
+      <div id="print-tipo" style="font-size:13px"></div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:#555;margin-bottom:2px">PESO</div>
+      <div id="print-peso" style="font-size:13px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="duplicate-modal">
+  <div class="modal">
+    <div class="modal-icon">⚠️</div>
+    <h2>Posible envío duplicado</h2>
+    <p>Ya existe un envío con el mismo remitente, destinatario y provincia de destino:</p>
+    <div id="duplicate-info" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:24px;font-family:var(--mono);font-size:13px;text-align:left"></div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="btn btn-ghost" onclick="document.getElementById('duplicate-modal').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCrearDuplicado()">Crear igual →</button>
+    </div>
+  </div>
+</div>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const API_BASE = window.LOGITRACK_API_URL || 'http://localhost:8000';
@@ -868,6 +925,7 @@ function resetForm() {
   const fi = document.getElementById('f-tipo'); if (fi) fi.selectedIndex = 0;
   const fe = document.getElementById('form-error'); if (fe) fe.style.display = 'none';
   document.getElementById('tracking-preview').textContent = 'LT-????-????';
+  const cp = document.getElementById('card-prediccion'); if (cp) cp.style.display = 'none';
 }
 
 function clearFieldError(inputId, errId) {
@@ -1007,31 +1065,28 @@ if (peso !== null) {
 
   document.getElementById('form-error').style.display = 'none';
 
+  // Verificar duplicados antes de crear
   try {
-    const envio = await api(`/api/envios?usuario=${loggedUser?.username || 'sistema'}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        remitente: rem,
-        destinatario: dest,
-        origen_provincia: orig,
-        origen_ciudad: origCiudad,
-        origen_direccion: origCalle,
-        destino_provincia: dst,
-        destino_ciudad: dstCiudad,
-        destino_direccion: dstCalle,
-        tel_destinatario: tel || null,
-        tipo_paquete: tipo,
-        peso_kg: peso,
-        observaciones: get('f-obs'),
-      }),
-    });
+    const existentes = await api(`/api/envios/search?q=${encodeURIComponent(dest)}`);
+    const duplicado = existentes.find(e =>
+      e.remitente.toLowerCase() === rem.toLowerCase() &&
+      e.destinatario.toLowerCase() === dest.toLowerCase() &&
+      e.destino_provincia === dst &&
+      e.estado !== 'Entregado'
+    );
+    if (duplicado) {
+      document.getElementById('duplicate-info').innerHTML =
+        `<div style="margin-bottom:6px"><span style="color:var(--text-dim)">Tracking ID:</span> <span style="color:var(--accent2)">${duplicado.tracking_id}</span></div>
+         <div style="margin-bottom:6px"><span style="color:var(--text-dim)">Estado:</span> <span class="badge ${badgeClass(duplicado.estado)}">${duplicado.estado.toUpperCase()}</span></div>
+         <div style="margin-bottom:6px"><span style="color:var(--text-dim)">Remitente:</span> ${duplicado.remitente}</div>
+         <div><span style="color:var(--text-dim)">Destino:</span> ${duplicado.destino_provincia}, ${duplicado.destino_ciudad}</div>`;
+      _pendingEnvioData = { rem, dest, orig, origCiudad, origCalle, dst, dstCiudad, dstCalle, tel, tipo, peso, obs: get('f-obs') };
+      document.getElementById('duplicate-modal').classList.add('show');
+      return;
+    }
+  } catch { /* si falla la búsqueda, continuar con la creación */ }
 
-    lastCreated = envio.tracking_id;
-    document.getElementById('modal-tracking-id').textContent = envio.tracking_id;
-    document.getElementById('success-modal').classList.add('show');
-  } catch (err) {
-    alert('Error al crear envío: ' + err.message);
-  }
+  await _ejecutarCrearEnvio(rem, dest, orig, origCiudad, origCalle, dst, dstCiudad, dstCalle, tel, tipo, peso, get('f-obs'));
 }
 
 function closeModal() { document.getElementById('success-modal').classList.remove('show'); }
@@ -1319,10 +1374,11 @@ async function verDetalle(tracking_id) {
       <div class="detail-header">
         <div><div style="font-size:12px;color:var(--text-dim);font-family:var(--mono);margin-bottom:6px">TRACKING ID</div><div class="detail-tracking">${e.tracking_id}</div></div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
-          ${(currentRole === 'Operador' || currentRole === 'Administrador') && e.estado === 'Creado' ? `<button class="btn btn-ghost btn-sm" onclick="abrirEditarEnvio()">✏ Editar</button>` : ''}
-          ${currentRole === 'Administrador' ? `<button class="btn btn-danger btn-sm" onclick="confirmarEliminar('${e.tracking_id}')">🗑 Eliminar</button>` : ''}
-        </div>
+  <span class="badge ${badgeClass(e.estado)}" style="font-size:13px;padding:6px 16px">${e.estado.toUpperCase()}</span>
+  ${(currentRole === 'Operador' || currentRole === 'Administrador') && e.estado === 'Creado' ? `<button class="btn btn-ghost btn-sm" onclick="abrirEditarEnvio()">✏ Editar</button>` : ''}
+  ${currentRole === 'Administrador' ? `<button class="btn btn-danger btn-sm" onclick="confirmarEliminar('${e.tracking_id}')">🗑 Eliminar</button>` : ''}
+  <button class="btn btn-ghost btn-sm" onclick="imprimirEtiqueta()">🖨 Imprimir etiqueta</button>
+</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
         <div>
@@ -1673,6 +1729,122 @@ function _detenerTimerInactividad() {
 ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evento => {
   document.addEventListener(evento, _resetearTimerInactividad, { passive: true });
 });
+
+
+// ── Imprimir etiqueta ─────────────────────────────────────────────────────────
+function imprimirEtiqueta() {
+  const e = currentDetalle;
+  if (!e) return;
+  document.getElementById('print-tracking').textContent = e.tracking_id;
+  document.getElementById('print-remitente').textContent = e.remitente;
+  document.getElementById('print-destinatario').textContent = e.destinatario;
+  document.getElementById('print-origen').textContent = `${e.origen_provincia}, ${e.origen_ciudad}\n${e.origen_direccion}`;
+  document.getElementById('print-destino').textContent = `${e.destino_provincia}, ${e.destino_ciudad}\n${e.destino_direccion}`;
+  document.getElementById('print-tipo').textContent = e.tipo_paquete;
+  document.getElementById('print-peso').textContent = e.peso_kg ? `${e.peso_kg} kg` : '—';
+  document.getElementById('etiqueta-print').style.display = 'block';
+  window.print();
+  document.getElementById('etiqueta-print').style.display = 'none';
+}
+
+
+// ── Duplicados ────────────────────────────────────────────────────────────────
+let _pendingEnvioData = null;
+
+async function _ejecutarCrearEnvio(rem, dest, orig, origCiudad, origCalle, dst, dstCiudad, dstCalle, tel, tipo, peso, obs) {
+  try {
+    const envio = await api(`/api/envios?usuario=${loggedUser?.username || 'sistema'}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        remitente: rem,
+        destinatario: dest,
+        origen_provincia: orig,
+        origen_ciudad: origCiudad,
+        origen_direccion: origCalle,
+        destino_provincia: dst,
+        destino_ciudad: dstCiudad,
+        destino_direccion: dstCalle,
+        tel_destinatario: tel || null,
+        tipo_paquete: tipo,
+        peso_kg: peso,
+        observaciones: obs,
+      }),
+    });
+    lastCreated = envio.tracking_id;
+    document.getElementById('modal-tracking-id').textContent = envio.tracking_id;
+    document.getElementById('success-modal').classList.add('show');
+  } catch (err) {
+    alert('Error al crear envío: ' + err.message);
+  }
+}
+
+async function confirmarCrearDuplicado() {
+  document.getElementById('duplicate-modal').classList.remove('show');
+  if (!_pendingEnvioData) return;
+  const d = _pendingEnvioData;
+  await _ejecutarCrearEnvio(d.rem, d.dest, d.orig, d.origCiudad, d.origCalle, d.dst, d.dstCiudad, d.dstCalle, d.tel, d.tipo, d.peso, d.obs);
+  _pendingEnvioData = null;
+}
+
+// ── Predicción en alta ────────────────────────────────────────────────────────
+let _prediccionTimeout = null;
+
+async function actualizarPrediccionAlta() {
+  const origen  = document.getElementById('f-origen')?.value;
+  const destino = document.getElementById('f-destino')?.value;
+  const pesoStr = document.getElementById('f-peso')?.value;
+  const tipo    = document.getElementById('f-tipo')?.value;
+
+  if (!origen || !destino || !pesoStr) return;
+
+  const peso = parseFloat(pesoStr);
+  if (isNaN(peso) || peso <= 0) return;
+
+  const dOrigen  = distanciasRef[origen]  ?? 500;
+  const dDestino = distanciasRef[destino] ?? 500;
+  const distancia_km = Math.abs(dOrigen - dDestino) + 100;
+
+  const card = document.getElementById('card-prediccion');
+  const resultado = document.getElementById('prediccion-resultado');
+  card.style.display = 'block';
+  resultado.innerHTML = '<span style="color:var(--text-muted)">Calculando...</span>';
+
+  try {
+    const apiUrl = window.LOGITRACK_API_URL || 'http://localhost:8000';
+    const resp = await fetch(`${apiUrl}/api/prediccion/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origen, destino, distancia_km, peso_kg: peso, tipo_paquete: tipo }),
+    });
+    if (!resp.ok) throw new Error();
+    const data = await resp.json();
+    const pct = Math.round(data.probabilidad * 100);
+    if (data.demorado) {
+      resultado.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:20px">⚠️</span>
+          <span style="color:#fb923c;font-weight:700">Probable demora</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">El modelo predice que este envío tiene alta probabilidad de llegar fuera de plazo.</div>
+        <div style="background:var(--surface2);border-radius:6px;padding:8px 12px;font-family:var(--mono);color:#fb923c;font-size:14px;font-weight:700">${pct}% probabilidad de demora</div>`;
+    } else {
+      resultado.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:20px">✅</span>
+          <span style="color:#4ade80;font-weight:700">A tiempo</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">El modelo predice que este envío llegará dentro del plazo estimado.</div>
+        <div style="background:var(--surface2);border-radius:6px;padding:8px 12px;font-family:var(--mono);color:#4ade80;font-size:14px;font-weight:700">${pct}% probabilidad de demora</div>`;
+    }
+  } catch {
+    card.style.display = 'none';
+  }
+}
+
+function _dispararPrediccion() {
+  clearTimeout(_prediccionTimeout);
+  _prediccionTimeout = setTimeout(actualizarPrediccionAlta, 600);
+}
 </script>
 
 <script>
