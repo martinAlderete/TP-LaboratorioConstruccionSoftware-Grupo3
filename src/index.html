@@ -305,9 +305,12 @@
   </div>
   <div class="card">
     <div class="flex-between" style="margin-bottom:16px">
-      <div class="card-title" style="margin-bottom:0">Envíos Recientes</div>
-      <button class="btn btn-ghost btn-sm" onclick="showScreen('busqueda')">🔍 Buscar</button>
-    </div>
+  <div class="card-title" style="margin-bottom:0">Envíos Recientes</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="exportarCSV()">⬇ Exportar CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('busqueda')">🔍 Buscar</button>
+  </div>
+</div>
     <table>
       <thead><tr><th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Destino</th><th>Estado</th><th>Fecha</th></tr></thead>
       <tbody id="envios-tbody"></tbody>
@@ -427,19 +430,29 @@
   </div>
   <div class="card">
     <div class="search-bar">
-      <div class="search-input-wrap" style="flex:2">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="search-input" placeholder="Tracking ID (ej: LT-2026-0001) o nombre..." oninput="buscar()">
-      </div>
-      <select id="filter-estado" onchange="buscar()" style="width:180px">
-        <option value="">Todos los estados</option>
-        <option value="Creado">Creado</option>
-        <option value="En Preparación">En Preparación</option>
-        <option value="En Tránsito">En Tránsito</option>
-        <option value="Entregado">Entregado</option>
-      </select>
-      <button class="btn btn-ghost btn-sm" onclick="clearSearch()">Limpiar</button>
-    </div>
+  <div class="search-input-wrap" style="flex:2">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Tracking ID (ej: LT-2026-0001) o nombre..." oninput="buscar()">
+  </div>
+  <select id="filter-estado" onchange="buscar()" style="width:180px">
+    <option value="">Todos los estados</option>
+    <option value="Creado">Creado</option>
+    <option value="En Preparación">En Preparación</option>
+    <option value="En Tránsito">En Tránsito</option>
+    <option value="Entregado">Entregado</option>
+  </select>
+  <button class="btn btn-ghost btn-sm" onclick="clearSearch()">Limpiar</button>
+</div>
+<div style="display:flex;gap:12px;margin-bottom:16px;align-items:center">
+  <div style="display:flex;align-items:center;gap:8px">
+    <label style="font-size:12px;color:var(--text-muted);font-family:var(--mono);white-space:nowrap">DESDE</label>
+    <input type="date" id="filter-fecha-desde" onchange="buscar()" style="width:160px">
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <label style="font-size:12px;color:var(--text-muted);font-family:var(--mono);white-space:nowrap">HASTA</label>
+    <input type="date" id="filter-fecha-hasta" onchange="buscar()" style="width:160px">
+  </div>
+</div>
     <div id="search-results-count" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
     <table>
       <thead><tr><th>Tracking ID</th><th>Remitente</th><th>Destinatario</th><th>Origen</th><th>Destino</th><th>Estado</th></tr></thead>
@@ -1212,16 +1225,30 @@ async function buscar() {
   searchTimeout = setTimeout(async () => {
     const q = document.getElementById('search-input').value.trim();
     const estado = document.getElementById('filter-estado').value;
+    const fechaDesde = document.getElementById('filter-fecha-desde').value;
+    const fechaHasta = document.getElementById('filter-fecha-hasta').value;
     const tbody = document.getElementById('search-tbody');
     const empty = document.getElementById('empty-busqueda');
     const count = document.getElementById('search-results-count');
-    if (!q && !estado) { renderSearchInit(); return; }
+    if (!q && !estado && !fechaDesde && !fechaHasta) { renderSearchInit(); return; }
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Buscando...</td></tr>';
     try {
       const params = new URLSearchParams();
       if (q) params.set('q', q);
       if (estado) params.set('estado', estado);
-      const results = await api(`/api/envios/search?${params}`);
+      let results = await api(`/api/envios/search?${params}`);
+
+      // Filtro por fechas en el frontend
+      if (fechaDesde) {
+        const desde = new Date(fechaDesde);
+        results = results.filter(e => new Date(e.fecha_creacion) >= desde);
+      }
+      if (fechaHasta) {
+        const hasta = new Date(fechaHasta);
+        hasta.setHours(23, 59, 59, 999);
+        results = results.filter(e => new Date(e.fecha_creacion) <= hasta);
+      }
+
       tbody.innerHTML = '';
       count.textContent = `${results.length} resultado${results.length !== 1 ? 's' : ''} encontrado${results.length !== 1 ? 's' : ''}`;
       if (results.length === 0) { empty.style.display = 'block'; empty.innerHTML = '<div class="empty-icon">😞</div><div>No se encontraron envíos con esos criterios</div>'; return; }
@@ -1238,7 +1265,11 @@ async function buscar() {
   }, 300);
 }
 
-function clearSearch() { renderSearchInit(); }
+function clearSearch() {
+  document.getElementById('filter-fecha-desde').value = '';
+  document.getElementById('filter-fecha-hasta').value = '';
+  renderSearchInit();
+}
 
 // ── Detalle ───────────────────────────────────────────────────────────────────
 let currentDetalle = null;
@@ -1516,16 +1547,24 @@ async function doLogin() {
     document.getElementById('main-nav').style.display = 'flex';
     document.getElementById('app-content').style.display = 'block';
     showScreen('listado');
+_resetearTimerInactividad();
   } catch (err) {
     document.getElementById('login-error').textContent = '⚠ ' + err.message;
     document.getElementById('login-error').classList.add('show');
   }
 }
 
-function doLogout() {
+function doLogout(porInactividad = false) {
   loggedUser = null; currentRole = 'Operador';
+  _detenerTimerInactividad();
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
+  if (porInactividad) {
+    document.getElementById('login-error').textContent = '⏱ Tu sesión expiró por inactividad. Ingresá nuevamente.';
+    document.getElementById('login-error').classList.add('show');
+  } else {
+    document.getElementById('login-error').classList.remove('show');
+  }
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('main-nav').style.display = 'none';
   document.getElementById('app-content').style.display = 'none';
@@ -1603,6 +1642,37 @@ async function actualizarBulkStats() {
   } catch {}
 }
 
+// ── Export CSV ────────────────────────────────────────────────────────────────
+function exportarCSV() {
+  const url = API_BASE + '/api/envios/export';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'logitrack_envios.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+
+// ── Inactividad ───────────────────────────────────────────────────────────────
+const INACTIVIDAD_MS = 30 * 60 * 1000; // 30 minutos
+let _timerInactividad = null;
+
+function _resetearTimerInactividad() {
+  if (!loggedUser) return;
+  clearTimeout(_timerInactividad);
+  _timerInactividad = setTimeout(() => doLogout(true), INACTIVIDAD_MS);
+}
+
+function _detenerTimerInactividad() {
+  clearTimeout(_timerInactividad);
+  _timerInactividad = null;
+}
+
+// Escuchar actividad del usuario
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evento => {
+  document.addEventListener(evento, _resetearTimerInactividad, { passive: true });
+});
 </script>
 
 <script>

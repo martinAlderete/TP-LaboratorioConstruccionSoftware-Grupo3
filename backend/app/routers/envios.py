@@ -104,6 +104,52 @@ def buscar_envios(
     return [schemas.EnvioListItem.from_orm(e) for e in envios]
 
 
+
+# ── Export CSV ────────────────────────────────────────────────────────────────
+
+@router.get("/export")
+def exportar_envios(
+    estado: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Envio)
+    if estado:
+        query = query.filter(models.Envio.estado == estado)
+    envios = query.order_by(models.Envio.fecha_creacion.desc()).all()
+
+    def fmt(val):
+        return '' if val is None else str(val)
+
+    lineas = ["Tracking ID,Remitente,Destinatario,Origen Provincia,Origen Ciudad,Origen Dirección,Destino Provincia,Destino Ciudad,Destino Dirección,Teléfono,Tipo Paquete,Peso (kg),Estado,Fecha Creación,Creado Por,Observaciones"]
+    for e in envios:
+        lineas.append(",".join([
+            fmt(e.tracking_id),
+            fmt(e.remitente),
+            fmt(e.destinatario),
+            fmt(e.origen_provincia),
+            fmt(e.origen_ciudad),
+            f'"{fmt(e.origen_direccion)}"',
+            fmt(e.destino_provincia),
+            fmt(e.destino_ciudad),
+            f'"{fmt(e.destino_direccion)}"',
+            fmt(e.tel_destinatario),
+            fmt(e.tipo_paquete),
+            fmt(e.peso_kg),
+            fmt(e.estado),
+            fmt(e.fecha_creacion)[:16] if e.fecha_creacion else '',
+            fmt(e.creado_por),
+            f'"{fmt(e.observaciones)}"',
+        ]))
+
+    contenido = "\n".join(lineas)
+
+    from fastapi.responses import Response
+    return Response(
+        content=contenido.encode("utf-8-sig"),  # utf-8-sig para compatibilidad con Excel
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=logitrack_envios.csv"}
+    )
+
 # ── Detalle ───────────────────────────────────────────────────────────────────
 
 @router.get("/{tracking_id}", response_model=schemas.EnvioOut)
